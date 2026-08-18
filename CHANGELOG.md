@@ -8,6 +8,11 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 
 ### Added
 
+- Started the opt-in Vitni 2 renderer migration under `app/renderer/src/v2/`, with the existing product preserved on `legacy/v0.6-ui` and the full product/migration contract recorded in `docs/vitni-2.md` plus a live implementation status in `docs/vitni-2-status.md`.
+- Added a new investigation-oriented Vitni 2 shell with case navigation, top-level investigation search, a shared application selection model, and one contextual Inspector for entities, relationships, assertions, sources, and events.
+- Added a live Overview workspace using real case data for entity/assertion/source counts, recent activity, attention items, relationship context, and event chronology without inventing an overall case-confidence score.
+- Added a derived Needs Attention model and workspace that explains unsupported, disputed, unreviewed, and unverified assertions, includes unit tests, and writes Accept/Dispute/Reject actions through the existing persisted review API.
+- Added Vitni 2 Entity, Assertion, Source, Graph, Timeline, Search, Evidence, and Reports workspaces. Existing Cytoscape graph rendering, media management, CSV import, source attachment, Settings, and report generation are reused behind the new product flow instead of being forked.
 - Added pull-request and `main` CI covering release metadata, linting, type checking, renderer tests, and production builds.
 - Added unified release tooling that validates and prepares `package.json`, `package-lock.json`, the sample case manifest, and `CHANGELOG.md` together, and can extract release notes for GitHub Releases.
 - Added a tag/manual Release workflow that packages Linux and Windows builds, publishes checksums, and creates GitHub build-provenance attestations before publishing the release.
@@ -15,6 +20,8 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 
 ### Changed
 
+- Reframed the user-facing Review concept for Vitni 2 as `Needs Attention`, preserving the existing persisted assertion review state while deriving concrete reasons and next actions from source, confidence, and review data.
+- Kept Electron as the Vitni 2 runtime during the product redesign; a possible Tauri migration is explicitly deferred until the new product workflow stabilizes.
 - Modernized the application baseline to Node 22+, Electron 43, React 19, Vite 8, TypeScript 5.9, Vitest 4, and compatible Electron/React build tooling; refreshed the dependency lockfile from a clean resolution and updated source/ref typings for the newer toolchain.
 - Aligned Framer Motion with its current 12.43 dependency set so its renderer/runtime dependencies remain internally compatible after the dependency refresh.
 - Raised the shared TypeScript output/library target to ES2022.
