@@ -14,6 +14,7 @@ import type { SourceWithUsage } from '@shared/types';
 import { piBridge, type ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { AttentionItem } from '../features/attention/model';
 import { ATTENTION_REASON_COPY } from '../features/attention/model';
+import { ReviewHistory } from '../components/ReviewHistory';
 import type { AttentionReason, InvestigationSelection, Vitni2Workspace } from '../types';
 
 type AttentionWorkspaceProps = {
@@ -335,6 +336,11 @@ export function AttentionWorkspace({
                           </button>
                         </div>
                       </div>
+
+                      <ReviewHistory
+                        assertionId={assertion.id}
+                        refreshKey={`${assertion.reviewed_at ?? 0}:${assertion.source_id}:${assertion.confidence}`}
+                      />
                     </section>
                   </div>
                 </div>
