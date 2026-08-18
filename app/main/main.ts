@@ -155,6 +155,16 @@ async function createWindow() {
     );
   }
 
+  if (screenshotMode) {
+    // loadURL/loadFile resolve after navigation. Start capture here and let the
+    // capture helper poll for React/data readiness instead of subscribing too late
+    // to did-finish-load and potentially missing the event entirely.
+    void captureVitni2Screenshots(mainWindow).catch((error) => {
+      console.error('[Screenshots] capture failed', error);
+      app.exit(1);
+    });
+  }
+
   mainWindow.once('ready-to-show', () => {
     if (!mainWindow?.isVisible()) {
       mainWindow?.show();
@@ -167,12 +177,6 @@ async function createWindow() {
   mainWindow.webContents.once('did-finish-load', () => {
     if (!mainWindow?.isVisible()) {
       mainWindow?.show();
-    }
-    if (screenshotMode && mainWindow) {
-      void captureVitni2Screenshots(mainWindow).catch((error) => {
-        console.error('[Screenshots] capture failed', error);
-        app.exit(1);
-      });
     }
   });
 
