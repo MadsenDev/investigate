@@ -21,7 +21,11 @@ export function deriveFindingHealth(
   const allSourced = linked.length > 0 && linked.every(
     (assertion) => Boolean(assertion.source_id && sourceById.has(assertion.source_id))
   );
-  const sourceIds = new Set(linked.map((assertion) => assertion.source_id).filter(Boolean));
+  const sourceIds = new Set(
+    linked
+      .map((assertion) => assertion.source_id)
+      .filter((sourceId) => Boolean(sourceId && sourceById.has(sourceId)))
+  );
   return {
     linked,
     allAccepted,
