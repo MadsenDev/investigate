@@ -31,7 +31,7 @@ import type { DbConnection } from '../persistence/database';
 import { deviceSettingsService } from '../services/deviceSettings';
 import type { OllamaManager } from '../services/ollama';
 import { openAIService } from '../services/openai';
-import { registerFindingHandlers } from './findings';
+import { registerFindingHandlers, writeFindingsEvidenceBundle } from './findings';
 import { normalizePersonalizationTheme, type PersonalizationTheme } from '../../renderer/src/features/personalization/theme';
 
 /**
@@ -2027,6 +2027,7 @@ export function registerIpcHandlers(
 
         sendReportProgress('writing_files', 'Writing report files…');
         await fsp.writeFile(path.join(outDir, 'report.html'), html, 'utf8');
+        await writeFindingsEvidenceBundle(db, projectManager, outDir);
         if (options.includeAttachments) {
           sendReportProgress('copying_attachments', 'Copying media and attachments…');
           const mediaSrc = path.join(root, manifest.paths.media);
@@ -2188,6 +2189,7 @@ export function registerIpcHandlers(
 
       sendReportProgress('writing_files', 'Writing report files…');
       await fsp.writeFile(path.join(outDir, 'report.html'), html, 'utf8');
+        await writeFindingsEvidenceBundle(db, projectManager, outDir);
       if (options.includeAttachments) {
         sendReportProgress('copying_attachments', 'Copying media and attachments…');
         const src = path.join(root, manifest.paths.media);

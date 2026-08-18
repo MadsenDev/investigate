@@ -166,6 +166,18 @@ function markdownForBundle(bundle: ReturnType<typeof findingBundle>): string {
   return `${lines.join('\n').trim()}\n`;
 }
 
+export async function writeFindingsEvidenceBundle(
+  db: DbConnection,
+  projectManager: ProjectManager,
+  outputDir: string
+): Promise<{ findingCount: number; sourceCount: number }> {
+  const bundle = findingBundle(db, projectManager);
+  await fsp.mkdir(outputDir, { recursive: true });
+  await fsp.writeFile(path.join(outputDir, 'findings-evidence.json'), `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
+  await fsp.writeFile(path.join(outputDir, 'findings-evidence.md'), markdownForBundle(bundle), 'utf8');
+  return { findingCount: bundle.findings.length, sourceCount: bundle.sources.length };
+}
+
 export function registerFindingHandlers(ipcMain: IpcMain, projectManager: ProjectManager) {
   ipcMain.handle('db:findings:list', () => listFindings(projectManager.getDatabase()));
 
@@ -230,13 +242,13 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
 
   ipcMain.handle('report:findings:export-bundle', async () => {
     const db = projectManager.getDatabase();
-    const bundle = findingBundle(db, projectManager);
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outputDir = path.join(projectManager.getRoot(), projectManager.getManifest().paths.exports, `findings-evidence-${stamp}`);
-    await fsp.mkdir(outputDir, { recursive: true });
-    await fsp.writeFile(path.join(outputDir, 'findings-evidence.json'), `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
-    await fsp.writeFile(path.join(outputDir, 'findings-evidence.md'), markdownForBundle(bundle), 'utf8');
-    recordFindingAudit(db, bundle.case.id, 'findings.export', `${bundle.findings.length} finding(s), ${bundle.sources.length} source(s)`);
-    return { outputDir, findingCount: bundle.findings.length, sourceCount: bundle.sources.length };
+    const result = await writeFindingsEvidenceBundle(db, projectManager, outputDir);
+    db.prepare(
+      `INSERT INTO audit (id, action, subject_kind, subject_id, actor, reason, transform_run_id, created_at)
+       VALUES (?, 'findings.export', 'case', ?, 'user', ?, NULL, ?)`
+    ).run(randomUUID(), projectManager.getManifest().id, `${result.findingCount} finding(s), ${result.sourceCount} source(s)`, Math.floor(Date.now() / 1000));
+    return { outputDir, ...result };
   });
 }
