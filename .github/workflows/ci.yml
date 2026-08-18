@@ -41,5 +41,8 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Smoke test findings migration and provenance
+        run: python3 tools/findings_smoke.py
+
       - name: Build
         run: npm run build
