@@ -71,7 +71,6 @@ export function EvidenceWorkspace({
 }: EvidenceWorkspaceProps) {
   const linked = sources.filter((source) => source.usage.length > 0);
   const unlinked = sources.filter((source) => source.usage.length === 0);
-  const media = sources.filter((source) => Boolean(source.mime?.startsWith('image/') || source.mime?.startsWith('video/') || source.mime?.startsWith('audio/')));
   const duplicates = useMemo(() => duplicateGroups(sources), [sources]);
   const selectedEntity = selection?.kind === 'entity' || selection?.kind === 'event'
     ? graph.nodes.find((node) => node.id === selection.id) ?? null
