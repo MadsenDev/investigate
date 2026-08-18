@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ExportReportModal } from '@renderer/components/ExportReportModal';
 import { MediaLibraryModal } from '@renderer/components/MediaLibraryModal';
 import { SourceCreationModal } from '@renderer/components/SourceCreationModal';
@@ -15,7 +16,6 @@ type WorkflowBridgesProps = {
   onSourceClose: () => void;
   onReportClose: () => void;
   onRefresh: () => Promise<void>;
-  onOpenMediaForSelection: (onSelect: (source: SourceRecord) => void) => void;
 };
 
 export function WorkflowBridges({
@@ -27,22 +27,40 @@ export function WorkflowBridges({
   onMediaClose,
   onSourceClose,
   onReportClose,
-  onRefresh,
-  onOpenMediaForSelection
+  onRefresh
 }: WorkflowBridgesProps) {
+  const [mediaSelection, setMediaSelection] = useState<((source: SourceRecord) => void) | null>(null);
   const selectedEntity = selection?.kind === 'entity' || selection?.kind === 'event'
     ? graph.nodes.find((node) => node.id === selection.id) ?? null
     : null;
+  const libraryOpen = mediaOpen || mediaSelection !== null;
+  const libraryMode = mediaSelection ? 'select' : 'manage';
+
+  const closeLibrary = () => {
+    setMediaSelection(null);
+    onMediaClose();
+  };
 
   return (
     <>
-      <MediaLibraryModal isOpen={mediaOpen} mode="manage" onClose={onMediaClose} />
+      <MediaLibraryModal
+        isOpen={libraryOpen}
+        mode={libraryMode}
+        onClose={closeLibrary}
+        onSelect={mediaSelection
+          ? (source) => {
+              mediaSelection(source);
+              setMediaSelection(null);
+              onMediaClose();
+            }
+          : undefined}
+      />
       <SourceCreationModal
         isOpen={sourceOpen}
         entity={selectedEntity}
         onClose={onSourceClose}
         onSourceCreated={() => void onRefresh()}
-        onOpenMediaLibrary={onOpenMediaForSelection}
+        onOpenMediaLibrary={(onSelect) => setMediaSelection(() => onSelect)}
       />
       <ExportReportModal isOpen={reportOpen} onClose={onReportClose} />
     </>
