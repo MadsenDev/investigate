@@ -13,11 +13,14 @@ import { AttentionWorkspace } from './workspaces/AttentionWorkspace';
 import { GraphWorkspaceV2 } from './workspaces/GraphWorkspaceV2';
 import { TimelineWorkspaceV2 } from './workspaces/TimelineWorkspaceV2';
 import { SearchWorkspace } from './workspaces/SearchWorkspace';
+import { EvidenceWorkspace } from './workspaces/EvidenceWorkspace';
+import { ReportsWorkspace } from './workspaces/ReportsWorkspace';
 import { MigrationWorkspace } from './workspaces/MigrationWorkspace';
 import { Navigation } from './components/Navigation';
 import { TopBar } from './components/TopBar';
 import { Inspector } from './components/Inspector';
 import { SettingsBridge } from './components/SettingsBridge';
+import { WorkflowBridges } from './components/WorkflowBridges';
 import { useInvestigationData } from './hooks/useInvestigationData';
 import { useVitni2Store } from './store';
 import type { InvestigationSelection } from './types';
@@ -38,6 +41,9 @@ export function Vitni2App() {
   const [projectCreationOpen, setProjectCreationOpen] = useState(false);
   const [importCsvOpen, setImportCsvOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     void legacy.boot();
@@ -94,9 +100,15 @@ export function Vitni2App() {
     const offOpen = piMenu.onProjectOpen(() => void legacy.openProject());
     const offSaveAs = piMenu.onProjectSaveAs(() => void piBridge.projectSaveAs());
     const offSettings = piMenu.onSettingsOpen(() => setSettingsOpen(true));
-    const offMedia = piMenu.onMediaGalleryOpen(() => setWorkspace('evidence'));
+    const offMedia = piMenu.onMediaGalleryOpen(() => {
+      setWorkspace('evidence');
+      setMediaOpen(true);
+    });
     const offProjectInfo = piMenu.onProjectInfoOpen(() => setWorkspace('profiles'));
-    const offExport = piMenu.onExportReportOpen(() => setWorkspace('reports'));
+    const offExport = piMenu.onExportReportOpen(() => {
+      setWorkspace('reports');
+      setReportOpen(true);
+    });
     return () => { offNew?.(); offOpen?.(); offSaveAs?.(); offSettings?.(); offMedia?.(); offProjectInfo?.(); offExport?.(); };
   }, [legacy.openProject, setWorkspace]);
 
@@ -126,11 +138,17 @@ export function Vitni2App() {
     onProjectImportCsv: () => setImportCsvOpen(true),
     onProjectClose: legacy.closeProject,
     onProjectSaveAs: () => void piBridge.projectSaveAs(),
-    onExportReport: () => setWorkspace('reports'),
+    onExportReport: () => {
+      setWorkspace('reports');
+      setReportOpen(true);
+    },
     onSettingsOpen: () => setSettingsOpen(true),
     onProjectInfo: () => setWorkspace('profiles'),
     onTerminology: () => setWorkspace('profiles'),
-    onMediaGallery: () => setWorkspace('evidence'),
+    onMediaGallery: () => {
+      setWorkspace('evidence');
+      setMediaOpen(true);
+    },
     onViewZoomSelection: noop,
     onViewFit: noop,
     onViewCenterSelection: noop,
@@ -209,6 +227,12 @@ export function Vitni2App() {
     case 'search':
       content = <SearchWorkspace graph={graph} assertions={assertions} sources={sources} onSelect={handleSelect} />;
       break;
+    case 'evidence':
+      content = <EvidenceWorkspace graph={graph} sources={sources} selection={selection} onSelect={handleSelect} onOpenMedia={() => setMediaOpen(true)} onImportCsv={() => setImportCsvOpen(true)} onAttachSource={() => setSourceOpen(true)} />;
+      break;
+    case 'reports':
+      content = <ReportsWorkspace graph={graph} assertions={assertions} sources={sources} attentionItems={attentionItems} onGenerate={() => setReportOpen(true)} />;
+      break;
     default:
       content = <MigrationWorkspace workspace={workspace} onOverview={() => setWorkspace('overview')} onLegacy={switchToLegacy} />;
       break;
@@ -220,6 +244,17 @@ export function Vitni2App() {
       <ProjectCreationModal isOpen={projectCreationOpen} onClose={() => setProjectCreationOpen(false)} onCreate={(name) => { setProjectCreationOpen(false); void legacy.createProject(name); }} />
       <ImportCsvModal isOpen={importCsvOpen} graph={graph} assertions={assertions} onClose={() => setImportCsvOpen(false)} onImported={async () => { await Promise.all([legacy.refreshGraph(), refresh()]); }} />
       <SettingsBridge open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <WorkflowBridges
+        graph={graph}
+        selection={selection}
+        mediaOpen={mediaOpen}
+        sourceOpen={sourceOpen}
+        reportOpen={reportOpen}
+        onMediaClose={() => setMediaOpen(false)}
+        onSourceClose={() => setSourceOpen(false)}
+        onReportClose={() => setReportOpen(false)}
+        onRefresh={refresh}
+      />
       <ToastViewport />
       <div className="v2-app pt-9">
         <Navigation workspace={workspace} attentionCount={attentionItems.length} caseName={caseName} caseId={caseId} localAIEnabled={legacy.localAIEnabled} onNavigate={setWorkspace} />
