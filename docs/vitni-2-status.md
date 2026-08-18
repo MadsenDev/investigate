@@ -52,8 +52,9 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Selecting an item opens the same assertion Inspector used elsewhere.
 - ✅ Accept / Dispute / Reject write through the existing assertion review API.
 - ✅ Unsupported assertions cannot be accepted until their source resolves.
-- ⚠️ Accepted assertions may remain in Needs Attention when confidence is still `unverified`; this is intentional until review/confidence semantics are refined.
-- ⏳ Future: stale-review detection, source-to-source contradiction model, duplicate/missing-field attention and AI suggestion review.
+- ✅ Review state and confidence are deliberately separate: accepted + unverified claims remain as explicit verification work.
+- ✅ Rejected claims are completed analyst decisions and leave Needs Attention.
+- ⏳ Future: stale-review detection, source-content contradiction modelling, missing-field attention and AI suggestion review.
 
 ### Entities / Assertions / Sources
 
@@ -108,9 +109,7 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Existing CSV import is available from the new workspace.
 - ✅ Existing source-attachment flow can attach evidence to the currently selected entity/event.
 - ✅ Existing media-library selection flow is preserved when attaching an existing source.
-- ⏳ Unified preview/extraction review flow.
-- ⏳ Suggested entity/event/assertion staging before mutation.
-- ✅ Evidence intake now surfaces unlinked material and probable duplicate source groups using deterministic hash/locator checks.
+- ✅ Evidence intake surfaces unlinked material and probable duplicate source groups using deterministic hash/locator checks.
 - ⏳ Unified preview/extraction review flow.
 - ⏳ Suggested entity/event/assertion staging before mutation.
 - ⏳ Richer contradiction signals between source contents/claims.
@@ -129,7 +128,7 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 ## Visual capture / screenshot infrastructure
 
 - ✅ PR #17 is merged and Vitni 2 foundation is now on `main`.
-- 🚧 PR #18 adds deterministic real-Electron screenshot capture.
+- ✅ PR #18 is merged and provides deterministic real-Electron screenshot capture infrastructure.
 - ✅ Screenshot mode opens the repository showcase investigation before renderer boot and forces Vitni 2.
 - ✅ Capture uses Electron `webContents.capturePage()` rather than a browser mock.
 - ✅ Fixed screenshot viewport: 1600×1000.
