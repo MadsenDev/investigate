@@ -1,17 +1,138 @@
-name: Build Release Artifacts
+name: Release
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release. Leave empty to release the version currently on main, creating the tag if needed.'
+        required: false
+        type: string
+      draft:
+        description: 'Publish as a draft release'
+        type: boolean
+        default: false
+      allow_unmerged:
+        description: 'Allow a release commit that is not on main'
+        type: boolean
+        default: false
+      replace_existing:
+        description: 'Replace an existing published release for this tag'
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Verify version and changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.check.outputs.version }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Resolve release tag
+        id: resolve
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = 'push' ]; then
+            TAG="$REF_NAME"
+          elif [ -n "$INPUT_TAG" ]; then
+            TAG="v${INPUT_TAG#v}"
+          else
+            TAG="v$(node tools/release.mjs version)"
+          fi
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            git checkout --detach "$TAG"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check release metadata
+        id: check
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: node tools/release.mjs check --tag "$TAG"
+
+      - name: Require release commit on main
+        if: ${{ !inputs.allow_unmerged }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::Release commit $SHA is not on main." >&2
+            exit 1
+          fi
+
+      - name: Require unpublished release
+        if: ${{ !inputs.replace_existing }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          STATE="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo absent)"
+          if [ "$STATE" = false ]; then
+            echo "::error::A published release already exists for $TAG." >&2
+            exit 1
+          fi
+
+      - name: Extract release notes
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: node tools/release.mjs notes --version "$VERSION" --out release-notes.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+      - name: Create tag
+        if: steps.resolve.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$TAG" -m "Vitni $VERSION"
+          git push origin "refs/tags/$TAG"
+
   package:
     name: Package ${{ matrix.os }}
+    needs: verify
     runs-on: ${{ matrix.runner }}
-
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -22,13 +143,13 @@ jobs:
           - os: windows
             runner: windows-latest
             command: npm run package:win
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+          persist-credentials: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -36,18 +157,82 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build packaged app
+      - name: Test
+        run: npm test
+
+      - name: Package application
         run: ${{ matrix.command }}
 
-      - name: Upload release assets
-        shell: bash
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vitni-${{ needs.verify.outputs.version }}-${{ matrix.os }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    needs: [verify, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: notes
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: vitni-*-
+          path: dist
+          merge-multiple: true
+        continue-on-error: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: vitni-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums and release body
         env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG: ${{ needs.verify.outputs.tag }}
         run: |
-          mapfile -d '' files < <(find release -maxdepth 1 -type f -print0)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No release artifacts found in release/"
-            exit 1
-          fi
-          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+          set -euo pipefail
+          find dist -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS.txt
+          {
+            cat notes/release-notes.md
+            echo
+            echo '## Downloads'
+            echo
+            echo 'Linux builds include AppImage and tar.gz packages. Windows builds include portable and zip packages.'
+            echo
+            echo '## Checksums'
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+            echo
+            echo "Artifacts carry GitHub build-provenance attestations."
+            echo
+            echo "**Full changelog**: https://github.com/vardirhq/vitni/blob/$TAG/CHANGELOG.md"
+          } > body.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.verify.outputs.tag }}
+          name: Vitni ${{ needs.verify.outputs.version }}
+          body_path: body.md
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ needs.verify.outputs.prerelease == 'true' }}
+          make_latest: ${{ needs.verify.outputs.prerelease == 'true' && 'false' || 'true' }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/*
