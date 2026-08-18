@@ -30,9 +30,10 @@ test('updates every version-bearing json shape', () => {
 test('cuts unreleased notes into a dated release and extracts them', () => {
   const source = '# Changelog\n\n## [Unreleased]\n\n### Added\n\n- Better releases.\n\n## [0.6.0]\n\n- Old.\n';
   const next = releaseChangelog(source, '0.6.1', '2026-08-18');
-  assert.match(next, /## \[Unreleased\]\n\n### Added/);
-  assert.match(next, /## \[0\.6\.1\] - 2026-08-18/);
+  assert.match(next, /## \[Unreleased\]\n\n## \[0\.6\.1\] - 2026-08-18/);
+  assert.match(next, /## \[0\.6\.1\] - 2026-08-18\n\n### Added\n\n- Better releases\./);
   assert.match(extractNotes(next, '0.6.1'), /Better releases/);
+  assert.doesNotMatch(extractNotes(next, '0.6.1'), /Old\./);
 });
 
 test('release checks catch drift', () => {
