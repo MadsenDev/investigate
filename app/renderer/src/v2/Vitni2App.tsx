@@ -81,6 +81,10 @@ export function Vitni2App() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('screenshot') !== '1') return;
 
+    // Screenshot mode pre-opens a deterministic case in the main process, so it
+    // intentionally bypasses the interactive project chooser/welcome transition.
+    legacy.setShowWelcome(false);
+
     const handler = (event: Event) => {
       const requested = (event as CustomEvent<{ workspace?: string }>).detail?.workspace;
       if (!requested || !screenshotWorkspaces.has(requested as Vitni2Workspace)) return;
@@ -90,7 +94,7 @@ export function Vitni2App() {
 
     window.addEventListener('vitni:screenshot-workspace', handler);
     return () => window.removeEventListener('vitni:screenshot-workspace', handler);
-  }, [clearSelection, setWorkspace]);
+  }, [clearSelection, legacy.setShowWelcome, setWorkspace]);
 
   useEffect(() => {
     if (!selection) {
