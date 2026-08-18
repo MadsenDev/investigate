@@ -188,13 +188,6 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: vitni-*-
-          path: dist
-          merge-multiple: true
-        continue-on-error: true
-
-      - uses: actions/download-artifact@v4
-        with:
           pattern: vitni-*
           path: dist
           merge-multiple: true
@@ -219,7 +212,7 @@ jobs:
             cat dist/SHA256SUMS.txt
             echo '```'
             echo
-            echo "Artifacts carry GitHub build-provenance attestations."
+            echo 'Artifacts carry GitHub build-provenance attestations.'
             echo
             echo "**Full changelog**: https://github.com/vardirhq/vitni/blob/$TAG/CHANGELOG.md"
           } > body.md
