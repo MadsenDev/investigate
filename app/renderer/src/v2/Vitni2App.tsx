@@ -19,7 +19,7 @@ import { Inspector } from './components/Inspector';
 import { SettingsBridge } from './components/SettingsBridge';
 import { useInvestigationData } from './hooks/useInvestigationData';
 import { useVitni2Store } from './store';
-import type { InvestigationSelection, Vitni2Workspace } from './types';
+import type { InvestigationSelection } from './types';
 import './v2.css';
 
 const noop = () => undefined;
