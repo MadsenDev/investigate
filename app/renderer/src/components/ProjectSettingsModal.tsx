@@ -42,7 +42,7 @@ export function ProjectSettingsModal({ isOpen, onClose }: Props) {
       if (!payload.createdDate) payload.createdDate = nowIso;
       await window.piBridge.setProjectMetadata(payload);
       onClose();
-    } catch (e) {
+    } catch {
       // noop - could add toast later
     } finally {
       setSaving(false);

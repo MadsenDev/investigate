@@ -168,7 +168,9 @@ export class OllamaManager {
       this.proc.on('error', () => {
         this.lastStartError = stderr || `Failed to launch Ollama from ${bin}`;
         try {
-          this.proc && !this.proc.killed && this.proc.kill('SIGTERM');
+          if (this.proc && !this.proc.killed) {
+            this.proc.kill('SIGTERM');
+          }
         } catch {
           // Ignore cleanup failures while surfacing the launch error.
         }
