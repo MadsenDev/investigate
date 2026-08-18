@@ -1,0 +1,44 @@
+name: Vitni 2 finding health wiring
+
+on:
+  push:
+    branches: [agent/vitni-2-findings-reporting]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/vitni-2-findings-reporting
+          fetch-depth: 0
+      - name: Replace inline readiness logic with tested model
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('app/renderer/src/v2/workspaces/ReportsWorkspace.tsx')
+          text = p.read_text()
+          import_marker = "import type { AttentionItem } from '../features/attention/model';\n"
+          if "deriveFindingHealth" not in text:
+              if import_marker not in text: raise SystemExit('import marker missing')
+              text = text.replace(import_marker, import_marker + "import { deriveFindingHealth } from '../features/findings/model';\n", 1)
+          old = """  const findingHealth = (finding: FindingRecord) => {\n    const linked = finding.assertion_ids.map((id) => assertionById.get(id)).filter(Boolean) as ParsedAssertionRecord[];\n    const allAccepted = linked.length > 0 && linked.every((assertion) => assertion.review_state === 'accepted');\n    const allSourced = linked.length > 0 && linked.every((assertion) => Boolean(assertion.source_id && sourceById.has(assertion.source_id)));\n    const sourceIds = new Set(linked.map((assertion) => assertion.source_id).filter(Boolean));\n    return {\n      linked,\n      allAccepted,\n      allSourced,\n      reportReady: finding.status === 'reviewed' && allAccepted && allSourced,\n      sourceCount: sourceIds.size\n    };\n  };\n"""
+          new = """  const findingHealth = (finding: FindingRecord) => deriveFindingHealth(finding, assertionById, sourceById);\n"""
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('findingHealth marker missing')
+          p.write_text(text)
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          git rm .github/workflows/vitni2-findings-health-wire.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/renderer/src/v2/workspaces/ReportsWorkspace.tsx
+          git commit -m "refactor: use tested finding readiness model"
+          git push origin HEAD:agent/vitni-2-findings-reporting
