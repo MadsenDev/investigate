@@ -45,6 +45,7 @@ interface PiBridge {
     confidence: AssertionRecord['confidence'];
   }) => Promise<string>;
   recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) => Promise<string>;
+  listAuditBySubject: (subjectKind: string, subjectId: string) => Promise<AuditRecord[]>;
   listTransforms: () => Promise<TransformRegistry>;
   executeRemoteTransform: (payload: {
     transformId: string;

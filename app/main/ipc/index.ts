@@ -1123,6 +1123,21 @@ export function registerIpcHandlers(
     })
   );
 
+  ipcMain.handle(
+    'db:audit:by-subject',
+    withDb(projectManager, (db, subjectKind: string, subjectId: string) => {
+      return db
+        .prepare(
+          `SELECT id, action, subject_kind, subject_id, actor, reason, transform_run_id, created_at
+           FROM audit
+           WHERE subject_kind = ? AND subject_id = ?
+           ORDER BY created_at DESC
+           LIMIT 50`
+        )
+        .all(subjectKind, subjectId) as AuditRecord[];
+    })
+  );
+
   // Transform execution records both the enrichment result and the consent
   // context that allowed the request to leave the local case.
   ipcMain.handle('transforms:list', () => transformRegistry);

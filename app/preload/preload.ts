@@ -55,6 +55,8 @@ function createBridge() {
     deleteSource: (sourceId: string) => ipcRenderer.invoke('db:source:delete', sourceId),
     recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) =>
       ipcRenderer.invoke('db:audit:record', payload),
+    listAuditBySubject: (subjectKind: string, subjectId: string): Promise<AuditRecord[]> =>
+      ipcRenderer.invoke('db:audit:by-subject', subjectKind, subjectId),
     listTransforms: (): Promise<TransformRegistry> => ipcRenderer.invoke('transforms:list'),
     executeRemoteTransform: (payload: {
       transformId: string;

@@ -20,6 +20,9 @@ export const piBridge = {
   loadGraph(): Promise<GraphSnapshot> {
     return window.piBridge.loadGraph();
   },
+  listAuditBySubject(subjectKind: string, subjectId: string): Promise<import('@shared/types').AuditRecord[]> {
+    return window.piBridge.listAuditBySubject(subjectKind, subjectId);
+  },
   createEntity(payload: { type: EntityRecord['type']; label: string; properties: Record<string, unknown> }): Promise<string> {
     return window.piBridge.createEntity(payload);
   },
