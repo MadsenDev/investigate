@@ -46,7 +46,7 @@ export function GraphWorkspaceV2({ graph, selection, personalizationTheme, onSel
   }, [focusMode, graph.edges, graph.nodes, query, selection, type]);
 
   const elements = useMemo(
-    () => mapGraphElements(visibleGraph, true, false, new Map()),
+    () => mapGraphElements(visibleGraph, true, false, new Map<string, string>()),
     [visibleGraph]
   );
 
@@ -69,7 +69,7 @@ export function GraphWorkspaceV2({ graph, selection, personalizationTheme, onSel
   return (
     <div className="v2-workspace v2-graph-workspace">
       <div className="v2-workspace-heading is-compact">
-        <div><span className="v2-eyebrow">Graph</span><h1>Explore relationships without losing the question</h1><p>Focus on a selected entity's neighborhood, then widen the investigation when needed.</p></div>
+        <div><span className="v2-eyebrow">Graph</span><h1>Explore relationships without losing the question</h1><p>Focus on a selected entity&apos;s neighborhood, then widen the investigation when needed.</p></div>
       </div>
       <div className="v2-graph-toolbar">
         <label className="v2-filter-search"><FaSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search graph…" /></label>
