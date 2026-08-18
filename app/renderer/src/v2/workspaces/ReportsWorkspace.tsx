@@ -3,6 +3,7 @@ import type { SourceWithUsage } from '@shared/types';
 import type { ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { GraphSnapshot } from '@renderer/types/graph';
 import type { AttentionItem } from '../features/attention/model';
+import './evidence-reports.css';
 
 type ReportsWorkspaceProps = {
   graph: GraphSnapshot;
