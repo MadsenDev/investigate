@@ -11,7 +11,9 @@ type AttentionWorkspaceProps = {
   onRefresh: () => Promise<void>;
 };
 
-const filters: Array<{ id: 'all' | AttentionReason; label: string }> = [
+type AttentionFilter = 'all' | AttentionReason;
+
+const filters: Array<{ id: AttentionFilter; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'unsupported', label: 'Unsupported' },
   { id: 'disputed', label: 'Disputed' },
@@ -19,8 +21,13 @@ const filters: Array<{ id: 'all' | AttentionReason; label: string }> = [
   { id: 'unverified', label: 'Unverified' }
 ];
 
+function countItemsForFilter(items: AttentionItem[], filter: AttentionFilter): number {
+  if (filter === 'all') return items.length;
+  return items.filter((item) => item.reasons.includes(filter)).length;
+}
+
 export function AttentionWorkspace({ items, onSelect, onRefresh }: AttentionWorkspaceProps) {
-  const [filter, setFilter] = useState<'all' | AttentionReason>('all');
+  const [filter, setFilter] = useState<AttentionFilter>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
   const visibleItems = useMemo(
     () => filter === 'all' ? items : items.filter((item) => item.reasons.includes(filter)),
@@ -54,7 +61,7 @@ export function AttentionWorkspace({ items, onSelect, onRefresh }: AttentionWork
         {filters.map((item) => (
           <button type="button" key={item.id} className={filter === item.id ? 'is-active' : ''} onClick={() => setFilter(item.id)}>
             {item.label}
-            <span>{item.id === 'all' ? items.length : items.filter((attention) => attention.reasons.includes(item.id)).length}</span>
+            <span>{countItemsForFilter(items, item.id)}</span>
           </button>
         ))}
       </div>
