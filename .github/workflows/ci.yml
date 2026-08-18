@@ -58,7 +58,10 @@ jobs:
         if: github.head_ref == 'agent/modernize-stack'
         run: |
           node tools/apply-modernization-fixes.mjs
-          git add app/main/projectManager.ts app/main/services/ollama.ts app/renderer/src/components/ProjectSettingsModal.tsx
+          git add app/main/projectManager.ts app/main/services/ollama.ts \
+            app/renderer/src/components/ProjectSettingsModal.tsx \
+            app/renderer/src/components/GraphWorkspace.tsx \
+            app/renderer/src/components/TitleBar.tsx tsconfig.base.json
           if ! git diff --cached --quiet; then
             git commit -m 'fix: adapt source to modern tooling'
             git push origin HEAD:agent/modernize-stack
