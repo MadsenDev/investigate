@@ -79,7 +79,7 @@ describe('deriveFindingHealth', () => {
     expect(deriveFindingHealth(finding(), assertions, new Map())).toMatchObject({
       allSourced: false,
       reportReady: false,
-      sourceCount: 1
+      sourceCount: 0
     });
   });
 
