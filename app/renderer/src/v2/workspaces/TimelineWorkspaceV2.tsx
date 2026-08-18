@@ -3,6 +3,7 @@ import { FaBullseye, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 import type { ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { GraphSnapshot } from '@renderer/types/graph';
 import { displayNameForNode } from '@renderer/features/graph/labeling';
+import { PerspectiveControls, type PerspectiveState } from '../components/PerspectiveControls';
 import { deriveInvestigationContext } from '../features/context/investigationContext';
 import type { InvestigationSelection } from '../types';
 
@@ -66,6 +67,14 @@ export function TimelineWorkspaceV2({ graph, assertions, selection, onSelect }: 
     return groups;
   }, [events]);
 
+  const applyPerspective = (state: PerspectiveState) => {
+    if (state.type === 'all' || state.type === 'event' || state.type === 'incident') setType(state.type);
+    if (typeof state.contextOnly === 'boolean') setContextOnly(state.contextOnly);
+    if (state.depth === 1 || state.depth === 2) setDepth(state.depth);
+  };
+
+  const perspectiveState: PerspectiveState = { type, contextOnly, depth };
+
   const contextDescription = !selection
     ? null
     : context.reason === 'source'
@@ -78,7 +87,10 @@ export function TimelineWorkspaceV2({ graph, assertions, selection, onSelect }: 
 
   return (
     <div className="v2-workspace">
-      <div className="v2-workspace-heading"><div><span className="v2-eyebrow">Timeline</span><h1>Chronology is another view of the same case</h1><p>Evidence, claims and graph selections can now narrow the chronology to the events around the current investigative context.</p></div></div>
+      <div className="v2-workspace-heading">
+        <div><span className="v2-eyebrow">Timeline</span><h1>Chronology is another view of the same case</h1><p>Evidence, claims and graph selections can narrow the chronology to the events around the current investigative context.</p></div>
+        <PerspectiveControls workspace="timeline" state={perspectiveState} onApply={applyPerspective} />
+      </div>
       <div className="v2-toolbar">
         <label className="v2-filter-search"><FaSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search events…" /></label>
         <select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="all">All event types</option><option value="event">Events</option><option value="incident">Incidents</option></select>
