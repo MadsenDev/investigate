@@ -123,6 +123,21 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ⏳ Reproducible report/export bundles.
 - ⏳ AI narrative assistance only after deterministic findings/citations are established.
 
+## Visual capture / screenshot infrastructure
+
+- ✅ PR #17 is merged and Vitni 2 foundation is now on `main`.
+- 🚧 PR #18 adds deterministic real-Electron screenshot capture.
+- ✅ Screenshot mode opens the repository showcase investigation before renderer boot and forces Vitni 2.
+- ✅ Capture uses Electron `webContents.capturePage()` rather than a browser mock.
+- ✅ Fixed screenshot viewport: 1600×1000.
+- ✅ Renderer exposes a screenshot-only workspace navigation hook guarded by `?screenshot=1`.
+- ✅ Planned capture set: Overview, Graph, Timeline, Entities, Assertions, Sources, Needs Attention, Evidence, Reports, Search.
+- ✅ GitHub Actions prepares the sample SQLite database, launches Electron under Xvfb, and preserves screenshot/diagnostic artifacts for 14 days.
+- ✅ Screenshot workflow is manual-only through `workflow_dispatch`; it does not run on normal pull requests or pushes because rebuilding Electron/native SQLite is intentionally expensive.
+- 🚧 Production renderer readiness still needs to be fully proven before the ten-workspace capture set is considered reliable.
+
+Rule going forward: run the manual screenshot workflow at meaningful Vitni 2 visual checkpoints, then review the real Electron artifact alongside normal CI. Screenshot generation must not block routine PR iteration.
+
 ## Deliberately not migrated yet
 
 These currently show an explicit migration state or remain accessible through legacy/settings surfaces. They should not be copied blindly; each should be evaluated against the Vitni 2 product model.
@@ -136,34 +151,20 @@ These currently show an explicit migration state or remain accessible through le
 - tutorials/onboarding
 - advanced personalization UX
 
-## Validation state
+## Recommended next work
 
-PR: **#17 — Build Vitni 2 investigation workspace foundation**
+### PR #19 — Attention + evidence workflow depth
 
-CI requirements before this foundation is ready:
+- make `Needs Attention` the primary quality-control workflow rather than an abstract review queue
+- refine review/confidence interaction so accepting a claim has predictable semantics
+- attach or replace a source directly from assertion attention context
+- expose supporting and conflicting evidence together when reviewing a claim
+- add review-note editing and useful review history presentation
+- add evidence preview/intake staging before case mutation
+- add duplicate/conflict signals based on evidence rather than synthetic UI state
+- make successful resolution remove or reclassify the attention item immediately
 
-- release metadata
-- native dependency install / `better-sqlite3` rebuild
-- lint
-- TypeScript
-- unit tests
-- production build
-
-First CI attempt failed only on three new lint findings (two unused imports and one unescaped JSX apostrophe); these were corrected without weakening lint rules.
-
-A final status should only be recorded here after CI runs against a stable head.
-
-## Recommended PR sequence after #17
-
-### PR 18 — attention + evidence workflow depth
-
-- refine review/confidence interaction
-- source attachment directly from assertion attention context
-- review note editing/history presentation
-- evidence preview/intake staging
-- duplicate/conflict signals based on evidence rather than synthetic UI state
-
-### PR 19 — graph + timeline investigation flow
+### PR #20 — Graph + timeline investigation flow
 
 - relationship/evidence filtering
 - neighborhood expansion controls
@@ -172,7 +173,7 @@ A final status should only be recorded here after CI runs against a stable head.
 - saved investigative perspectives
 - larger-case performance/decluttering pass
 
-### PR 20 — findings + reporting
+### PR #21 — Findings + reporting
 
 - durable finding concept if the existing schema cannot express it cleanly
 - deterministic finding → assertion → source provenance
@@ -180,7 +181,7 @@ A final status should only be recorded here after CI runs against a stable head.
 - reproducible export bundle
 - optional AI narrative on top, never as source of truth
 
-### PR 21 — remaining capability migration
+### PR #22 — Remaining capability migration
 
 Evaluate transforms, AI, profiles, personalization, terminology and onboarding. Remove features that do not earn a place in the Vitni 2 workflow instead of preserving them out of nostalgia.
 

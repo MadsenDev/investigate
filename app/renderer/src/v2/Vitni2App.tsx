@@ -23,10 +23,22 @@ import { SettingsBridge } from './components/SettingsBridge';
 import { WorkflowBridges } from './components/WorkflowBridges';
 import { useInvestigationData } from './hooks/useInvestigationData';
 import { useVitni2Store } from './store';
-import type { InvestigationSelection } from './types';
+import type { InvestigationSelection, Vitni2Workspace } from './types';
 import './v2.css';
 
 const noop = () => undefined;
+const screenshotWorkspaces = new Set<Vitni2Workspace>([
+  'overview',
+  'graph',
+  'timeline',
+  'entities',
+  'assertions',
+  'sources',
+  'attention',
+  'evidence',
+  'reports',
+  'search'
+]);
 
 export function Vitni2App() {
   const legacy = useAppStore();
@@ -65,6 +77,24 @@ export function Vitni2App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [setWorkspace]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('screenshot') !== '1') return;
+
+    // Screenshot mode pre-opens a deterministic case in the main process, so it
+    // intentionally bypasses the interactive project chooser/welcome transition.
+    legacy.setShowWelcome(false);
+
+    const handler = (event: Event) => {
+      const requested = (event as CustomEvent<{ workspace?: string }>).detail?.workspace;
+      if (!requested || !screenshotWorkspaces.has(requested as Vitni2Workspace)) return;
+      clearSelection();
+      setWorkspace(requested as Vitni2Workspace);
+    };
+
+    window.addEventListener('vitni:screenshot-workspace', handler);
+    return () => window.removeEventListener('vitni:screenshot-workspace', handler);
+  }, [clearSelection, legacy.setShowWelcome, setWorkspace]);
 
   useEffect(() => {
     if (!selection) {
@@ -262,7 +292,7 @@ export function Vitni2App() {
           <TopBar caseName={caseName} onSearch={() => setWorkspace('search')} onSettings={() => setSettingsOpen(true)} />
           {error ? <div className="v2-data-error">Some investigation data could not be loaded: {error}</div> : null}
           {loading ? <div className="v2-data-loading">Refreshing investigation data…</div> : null}
-          <main className="v2-content">{content}</main>
+          <main className="v2-content" data-v2-workspace={workspace}>{content}</main>
         </div>
         <Inspector selection={selection} graph={graph} assertions={assertions} sources={sources} attentionItems={attentionItems} tab={inspectorTab} onTabChange={setInspectorTab} onClose={clearSelection} onSelect={handleSelect} />
         <button type="button" className="v2-legacy-switch" onClick={switchToLegacy}>Legacy UI</button>
