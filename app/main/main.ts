@@ -67,27 +67,70 @@ async function waitForRendererCondition(
   throw new Error(`Timed out waiting for renderer condition: ${expression}`);
 }
 
+async function writeScreenshotDiagnostics(window: BrowserWindow, outputDir: string, label: string) {
+  try {
+    const image = await window.webContents.capturePage();
+    await fs.promises.writeFile(path.join(outputDir, `${label}.png`), image.toPNG());
+  } catch (error) {
+    console.error('[Screenshots] failed to capture diagnostic image', error);
+  }
+
+  try {
+    const rendererState = await window.webContents.executeJavaScript(
+      `({
+        url: window.location.href,
+        title: document.title,
+        bodyText: document.body?.innerText?.slice(0, 12000) ?? '',
+        rootHtml: document.getElementById('root')?.innerHTML?.slice(0, 12000) ?? '',
+        hasV2App: Boolean(document.querySelector('.v2-app')),
+        hasV2Content: Boolean(document.querySelector('.v2-content')),
+        hasWelcome: Boolean(document.querySelector('[class*="welcome"], [class*="Welcome"]')),
+        hasSplash: Boolean(document.querySelector('[class*="splash"], [class*="Splash"]'))
+      })`,
+      true
+    );
+    await fs.promises.writeFile(
+      path.join(outputDir, `${label}.json`),
+      `${JSON.stringify(rendererState, null, 2)}\n`,
+      'utf8'
+    );
+    console.log(`[Screenshots] diagnostic state: ${JSON.stringify(rendererState)}`);
+  } catch (error) {
+    console.error('[Screenshots] failed to capture diagnostic renderer state', error);
+  }
+}
+
 async function captureVitni2Screenshots(window: BrowserWindow): Promise<void> {
   if (!screenshotOutputDir) return;
 
   const outputDir = path.resolve(screenshotOutputDir);
   await fs.promises.mkdir(outputDir, { recursive: true });
 
-  await waitForRendererCondition(
-    window,
-    `document.querySelector('.v2-content[data-v2-workspace]') && !document.querySelector('.v2-data-loading')`,
-    30_000
-  );
+  try {
+    await waitForRendererCondition(
+      window,
+      `document.querySelector('.v2-content[data-v2-workspace]') && !document.querySelector('.v2-data-loading')`,
+      30_000
+    );
+  } catch (error) {
+    await writeScreenshotDiagnostics(window, outputDir, 'diagnostic-readiness-timeout');
+    throw error;
+  }
 
   for (const workspace of screenshotWorkspaces) {
     await window.webContents.executeJavaScript(
       `window.dispatchEvent(new CustomEvent('vitni:screenshot-workspace', { detail: { workspace: ${JSON.stringify(workspace)} } }))`,
       true
     );
-    await waitForRendererCondition(
-      window,
-      `document.querySelector('.v2-content[data-v2-workspace=${JSON.stringify(workspace)}]') && !document.querySelector('.v2-data-loading')`
-    );
+    try {
+      await waitForRendererCondition(
+        window,
+        `document.querySelector('.v2-content[data-v2-workspace=${JSON.stringify(workspace)}]') && !document.querySelector('.v2-data-loading')`
+      );
+    } catch (error) {
+      await writeScreenshotDiagnostics(window, outputDir, `diagnostic-${workspace}-timeout`);
+      throw error;
+    }
 
     // Give layout engines, fonts and transitions a brief deterministic settle window.
     await new Promise((resolve) => setTimeout(resolve, workspace === 'graph' ? 1200 : 450));
@@ -103,8 +146,6 @@ async function captureVitni2Screenshots(window: BrowserWindow): Promise<void> {
 async function createWindow() {
   console.log('[Main] createWindow start');
 
-  // Create and load the window ASAP so the UI appears even if background init is slow.
-  // Screenshot mode uses a fixed viewport so visual artifacts remain comparable between runs.
   mainWindow = new BrowserWindow({
     width: screenshotMode ? 1600 : 1440,
     height: screenshotMode ? 1000 : 900,
@@ -122,6 +163,15 @@ async function createWindow() {
     }
   });
 
+  if (screenshotMode) {
+    mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      console.log(`[Renderer:${level}] ${message} (${sourceId}:${line})`);
+    });
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      console.error('[Screenshots] renderer process gone', details);
+    });
+  }
+
   console.log('[Main] init: creating project manager');
   const encryptionKey =
     process.env.PI_DB_KEY && process.env.PI_DB_KEY.trim().length > 0
@@ -134,8 +184,6 @@ async function createWindow() {
   registerIpcHandlers(ipcMain, projectManager, transformRegistry, ollamaManager, mainWindow);
 
   if (screenshotMode && screenshotProjectPath) {
-    // Initialize storage first, then deliberately replace the scratch/recent project with
-    // the repository sample. The renderer therefore boots directly into deterministic data.
     await projectManager.initialize();
     await projectManager.openProject(path.resolve(screenshotProjectPath));
   }
@@ -156,9 +204,6 @@ async function createWindow() {
   }
 
   if (screenshotMode) {
-    // loadURL/loadFile resolve after navigation. Start capture here and let the
-    // capture helper poll for React/data readiness instead of subscribing too late
-    // to did-finish-load and potentially missing the event entirely.
     void captureVitni2Screenshots(mainWindow).catch((error) => {
       console.error('[Screenshots] capture failed', error);
       app.exit(1);
@@ -193,7 +238,6 @@ async function createWindow() {
   });
 
   if (!screenshotMode) {
-    // Normal interactive startup remains asynchronous so the shell appears quickly.
     ;(async () => {
       try {
         await projectManager?.initialize();
