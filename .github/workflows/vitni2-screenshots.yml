@@ -2,28 +2,6 @@ name: Vitni 2 Screenshots
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/main/**'
-      - 'app/preload/**'
-      - 'app/renderer/src/v2/**'
-      - 'app/renderer/src/features/**'
-      - 'app/renderer/src/components/**'
-      - 'shared/**'
-      - 'samples/operation-glass-harbor.vitni/**'
-      - '.github/workflows/vitni2-screenshots.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'app/main/**'
-      - 'app/preload/**'
-      - 'app/renderer/src/v2/**'
-      - 'app/renderer/src/features/**'
-      - 'app/renderer/src/components/**'
-      - 'shared/**'
-      - 'samples/operation-glass-harbor.vitni/**'
-      - '.github/workflows/vitni2-screenshots.yml'
 
 permissions:
   contents: read
