@@ -6,6 +6,7 @@ import { buildSearchResults, filterSearchResults, searchGroupLabel } from '@rend
 import type { GraphSnapshot } from '@renderer/types/graph';
 import type { SearchResult } from '@renderer/types/app';
 import type { InvestigationSelection } from '../types';
+import './search.css';
 
 type SearchWorkspaceProps = {
   graph: GraphSnapshot;
