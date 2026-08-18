@@ -15,6 +15,9 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 
 ### Changed
 
+- Modernized the application baseline to Node 22+, Electron 43, React 19, Vite 8, TypeScript 5.9, Vitest 4, and compatible Electron/React build tooling; refreshed the dependency lockfile from a clean resolution and updated source/ref typings for the newer toolchain.
+- Aligned Framer Motion with its current 12.43 dependency set so its renderer/runtime dependencies remain internally compatible after the dependency refresh.
+- Raised the shared TypeScript output/library target to ES2022.
 - Modernized the existing release packaging workflow so releases are gated by matching version/changelog metadata instead of starting only after a GitHub Release is manually created.
 - Kept the existing `version:patch`, `version:minor`, and `version:major` commands as aliases for the unified release preparation flow.
 
