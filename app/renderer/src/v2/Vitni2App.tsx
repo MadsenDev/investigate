@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { TitleBar } from '@renderer/components/TitleBar';
 import { ProjectCreationModal } from '@renderer/components/ProjectCreationModal';
 import { ImportCsvModal } from '@renderer/components/ImportCsvModal';
@@ -12,6 +12,7 @@ import { EntitiesWorkspace, AssertionsWorkspace, SourcesWorkspace } from './work
 import { AttentionWorkspace } from './workspaces/AttentionWorkspace';
 import { GraphWorkspaceV2 } from './workspaces/GraphWorkspaceV2';
 import { TimelineWorkspaceV2 } from './workspaces/TimelineWorkspaceV2';
+import { SearchWorkspace } from './workspaces/SearchWorkspace';
 import { MigrationWorkspace } from './workspaces/MigrationWorkspace';
 import { Navigation } from './components/Navigation';
 import { TopBar } from './components/TopBar';
@@ -182,7 +183,7 @@ export function Vitni2App() {
     );
   }
 
-  let content: React.ReactNode;
+  let content: ReactNode;
   switch (workspace) {
     case 'overview':
       content = <OverviewWorkspace graph={graph} assertions={assertions} sources={sources} attentionItems={attentionItems} recentActivity={recentActivity} onSelect={handleSelect} onNavigate={setWorkspace} />;
@@ -204,6 +205,9 @@ export function Vitni2App() {
       break;
     case 'attention':
       content = <AttentionWorkspace items={attentionItems} onSelect={handleSelect} onRefresh={refresh} />;
+      break;
+    case 'search':
+      content = <SearchWorkspace graph={graph} assertions={assertions} sources={sources} onSelect={handleSelect} />;
       break;
     default:
       content = <MigrationWorkspace workspace={workspace} onOverview={() => setWorkspace('overview')} onLegacy={switchToLegacy} />;
