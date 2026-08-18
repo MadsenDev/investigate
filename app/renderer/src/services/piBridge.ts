@@ -1,6 +1,7 @@
 import type {
   AssertionRecord,
   AssertionReviewState,
+  AuditRecord,
   EntityRecord,
   MediaFolderNode,
   MediaLibraryItem,
@@ -20,8 +21,11 @@ export const piBridge = {
   loadGraph(): Promise<GraphSnapshot> {
     return window.piBridge.loadGraph();
   },
-  listAuditBySubject(subjectKind: string, subjectId: string): Promise<import('@shared/types').AuditRecord[]> {
+  listAuditBySubject(subjectKind: string, subjectId: string): Promise<AuditRecord[]> {
     return window.piBridge.listAuditBySubject(subjectKind, subjectId);
+  },
+  recordAudit(payload: Omit<AuditRecord, 'created_at' | 'id'>): Promise<string> {
+    return window.piBridge.recordAudit(payload);
   },
   createEntity(payload: { type: EntityRecord['type']; label: string; properties: Record<string, unknown> }): Promise<string> {
     return window.piBridge.createEntity(payload);
