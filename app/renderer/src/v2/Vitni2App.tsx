@@ -252,7 +252,7 @@ export function Vitni2App() {
       content = <SourcesWorkspace sources={sources} onSelect={handleSelect} />;
       break;
     case 'attention':
-      content = <AttentionWorkspace items={attentionItems} onSelect={handleSelect} onRefresh={refresh} />;
+      content = <AttentionWorkspace items={attentionItems} assertions={assertions} sources={sources} onSelect={handleSelect} onNavigate={setWorkspace} onRefresh={refresh} />;
       break;
     case 'search':
       content = <SearchWorkspace graph={graph} assertions={assertions} sources={sources} onSelect={handleSelect} />;
