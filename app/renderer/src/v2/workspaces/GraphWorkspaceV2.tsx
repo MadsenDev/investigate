@@ -7,6 +7,7 @@ import type { PersonalizationTheme } from '@renderer/features/personalization/th
 import type { ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { GraphCanvasApi } from '@renderer/types/graphCanvasApi';
 import type { GraphSnapshot } from '@renderer/types/graph';
+import { PerspectiveControls, type PerspectiveState } from '../components/PerspectiveControls';
 import { deriveInvestigationContext } from '../features/context/investigationContext';
 import type { InvestigationSelection } from '../types';
 
@@ -99,6 +100,24 @@ export function GraphWorkspaceV2({ graph, assertions, selection, personalization
     graphApiRef.current?.runLayout(preset);
   };
 
+  const applyPerspective = (state: PerspectiveState) => {
+    if (typeof state.type === 'string') setType(state.type);
+    if (typeof state.relationshipType === 'string') setRelationshipType(state.relationshipType);
+    if (state.evidenceFilter === 'all' || state.evidenceFilter === 'cited' || state.evidenceFilter === 'attention') setEvidenceFilter(state.evidenceFilter);
+    if (typeof state.contextMode === 'boolean') setContextMode(state.contextMode);
+    if (typeof state.connectedOnly === 'boolean') setConnectedOnly(state.connectedOnly);
+    if (state.depth === 1 || state.depth === 2) setDepth(state.depth);
+  };
+
+  const perspectiveState: PerspectiveState = {
+    type,
+    relationshipType,
+    evidenceFilter,
+    contextMode,
+    connectedOnly,
+    depth
+  };
+
   const contextLabel = !selection
     ? 'No context selected'
     : context.reason === 'source'
@@ -113,6 +132,7 @@ export function GraphWorkspaceV2({ graph, assertions, selection, personalization
     <div className="v2-workspace v2-graph-workspace">
       <div className="v2-workspace-heading is-compact">
         <div><span className="v2-eyebrow">Graph</span><h1>Explore relationships without losing the question</h1><p>Selection context follows entities, relationships, assertions and evidence into the graph, while evidence filters help separate useful structure from database noise.</p></div>
+        <PerspectiveControls workspace="graph" state={perspectiveState} onApply={applyPerspective} />
       </div>
       <div className="v2-graph-toolbar">
         <label className="v2-filter-search"><FaSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search graph…" /></label>
