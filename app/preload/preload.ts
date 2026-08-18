@@ -4,6 +4,7 @@ import type {
   AuditRecord,
   AttachmentResult,
   EntityRecord,
+  FindingRecord,
   MediaFolderNode,
   MediaLibraryItem,
   TransformExecutionResult,
@@ -57,6 +58,14 @@ function createBridge() {
       ipcRenderer.invoke('db:audit:record', payload),
     listAuditBySubject: (subjectKind: string, subjectId: string): Promise<AuditRecord[]> =>
       ipcRenderer.invoke('db:audit:by-subject', subjectKind, subjectId),
+    listFindings: (): Promise<FindingRecord[]> => ipcRenderer.invoke('db:findings:list'),
+    createFinding: (payload: { title: string; body?: string; assertion_ids?: string[] }): Promise<string> =>
+      ipcRenderer.invoke('db:finding:create', payload),
+    updateFinding: (findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>): Promise<boolean> =>
+      ipcRenderer.invoke('db:finding:update', findingId, updates),
+    deleteFinding: (findingId: string): Promise<boolean> => ipcRenderer.invoke('db:finding:delete', findingId),
+    exportFindingsBundle: (): Promise<{ outputDir: string; findingCount: number; sourceCount: number }> =>
+      ipcRenderer.invoke('report:findings:export-bundle'),
     listTransforms: (): Promise<TransformRegistry> => ipcRenderer.invoke('transforms:list'),
     executeRemoteTransform: (payload: {
       transformId: string;

@@ -33,6 +33,8 @@
     "package:win": "npm run build && electron-builder --win portable zip --publish never",
     "test:renderer": "vitest run --config app/renderer/vite.config.ts",
     "dev": "node scripts/resolve-dev-server.mjs && concurrently -k \"npm:dev:main\" \"npm:dev:preload\" \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "dev:v2": "cross-env VITNI_DEV_UI=v2 npm run dev",
+    "dev:legacy": "cross-env VITNI_DEV_UI=legacy npm run dev",
     "dev:main": "tsc -p app/main/tsconfig.json --watch",
     "dev:preload": "tsc -p app/preload/tsconfig.json --watch",
     "dev:renderer": "vite --config app/renderer/vite.config.ts",

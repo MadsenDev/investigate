@@ -4,6 +4,7 @@ import type {
   AuditRecord,
   AttachmentResult,
   EntityRecord,
+  FindingRecord,
   MediaFolderNode,
   MediaLibraryItem,
   ProjectMetadata,
@@ -46,6 +47,11 @@ interface PiBridge {
   }) => Promise<string>;
   recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) => Promise<string>;
   listAuditBySubject: (subjectKind: string, subjectId: string) => Promise<AuditRecord[]>;
+  listFindings: () => Promise<FindingRecord[]>;
+  createFinding: (payload: { title: string; body?: string; assertion_ids?: string[] }) => Promise<string>;
+  updateFinding: (findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>) => Promise<boolean>;
+  deleteFinding: (findingId: string) => Promise<boolean>;
+  exportFindingsBundle: () => Promise<{ outputDir: string; findingCount: number; sourceCount: number }>;
   listTransforms: () => Promise<TransformRegistry>;
   executeRemoteTransform: (payload: {
     transformId: string;

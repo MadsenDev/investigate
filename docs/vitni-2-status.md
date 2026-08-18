@@ -121,16 +121,21 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ⏳ Suggested entity/event/assertion staging before mutation.
 - ⏳ Richer contradiction signals between source contents/claims.
 
-### Reports
+### Findings / Reports
 
-- ✅ Dedicated Reports workspace.
-- ✅ Shows accepted assertions, cited sources and high-priority unresolved attention items.
-- ✅ Existing report generator remains functional through a bridge.
-- ✅ UI communicates the intended Evidence → Assertion → Finding → Report chain.
-- ⏳ Durable Finding model/workflow.
-- ⏳ Deterministic citation/evidence appendix model.
-- ⏳ Reproducible report/export bundles.
-- ⏳ AI narrative assistance only after deterministic findings/citations are established.
+- ✅ Dedicated Findings & Reports workspace.
+- ✅ Durable `finding` + `finding_assertion` persistence model added in migration 007.
+- ✅ Finding states: draft, reviewed, disputed, withdrawn.
+- ✅ Main-process invariant prevents reviewed findings without accepted, resolvable supporting assertions.
+- ✅ Finding readiness is recalculated from live assertion/source state and covered by unit tests.
+- ✅ Investigators can create findings, attach/remove accepted assertions, inspect assertion → source provenance, and change finding state.
+- ✅ Deterministic `vitni-findings-evidence-v1` JSON provenance export.
+- ✅ Human-readable Markdown provenance export with evidence appendix.
+- ✅ Existing narrative report generator now writes the same provenance files into every generated report directory.
+- ✅ Finding actions and standalone provenance exports write audit events.
+- ✅ Full design/contract documented in `docs/vitni-2-findings.md`.
+- ⏳ Inline citation labels/anchors inside narrative HTML/PDF remain presentation follow-up work.
+- ⏳ Optional AI narrative must consume reviewed findings only and remain downstream of deterministic provenance.
 
 ## Visual capture / screenshot infrastructure
 
@@ -174,7 +179,7 @@ These currently show an explicit migration state or remain accessible through le
 - ⏳ Full source-content contradiction modelling remains future work.
 - ⏳ Unified preview/extraction staging before case mutation remains future work.
 
-### PR #20 — Graph + timeline investigation flow (active)
+### PR #20 — Graph + timeline investigation flow (merged)
 
 - ✅ shared selection context across Graph and Timeline
 - ✅ relationship/evidence filtering
@@ -185,13 +190,17 @@ These currently show an explicit migration state or remain accessible through le
 - ✅ connected-only graph decluttering pass
 - ⏳ validate large-case behavior with real cases before introducing automatic clustering
 
-### PR #21 — Findings + reporting
+### PR #21 — Findings + reporting (active)
 
-- durable finding concept if the existing schema cannot express it cleanly
-- deterministic finding → assertion → source provenance
-- report citations/evidence appendix
-- reproducible export bundle
-- optional AI narrative on top, never as source of truth
+- ✅ durable finding + support-link schema
+- ✅ finding CRUD and reviewability invariant through Electron IPC
+- ✅ deterministic finding → assertion → source provenance
+- ✅ JSON + Markdown evidence appendix/export bundle
+- ✅ provenance files included beside generated narrative reports
+- ✅ finding readiness tests
+- ✅ finding/reporting contract documented in `docs/vitni-2-findings.md`
+- ⏳ validate migration + export against Operation Glass Harbor in CI/manual smoke
+- ⏳ narrative citation anchors remain a presentation follow-up rather than a source-of-truth requirement
 
 ### PR #22 — Remaining capability migration
 

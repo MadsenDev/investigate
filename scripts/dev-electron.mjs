@@ -76,6 +76,12 @@ await Promise.all([
   waitForHttp(rendererUrl, timeoutMs)
 ]);
 
+const rendererLaunchUrl = new URL(rendererUrl);
+const requestedUi = process.env.VITNI_DEV_UI?.trim();
+if (requestedUi === 'v2' || requestedUi === 'legacy') {
+  rendererLaunchUrl.searchParams.set('ui', requestedUi);
+}
+
 const electronBinary =
   process.platform === 'win32'
     ? path.join(repoRoot, 'node_modules', '.bin', 'electron.cmd')
@@ -88,7 +94,7 @@ const child = spawn(electronBinary, ['.'], {
     ...process.env,
     NODE_ENV: 'development',
     PI_DB_KEY: 'dev-key-123',
-    VITNI_DEV_SERVER_URL: rendererUrl
+    VITNI_DEV_SERVER_URL: rendererLaunchUrl.toString()
   }
 });
 
