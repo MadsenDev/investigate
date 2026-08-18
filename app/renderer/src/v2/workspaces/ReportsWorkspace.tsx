@@ -15,6 +15,7 @@ import type { FindingRecord, FindingStatus, SourceWithUsage } from '@shared/type
 import { piBridge, type ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { GraphSnapshot } from '@renderer/types/graph';
 import type { AttentionItem } from '../features/attention/model';
+import { deriveFindingHealth } from '../features/findings/model';
 import './evidence-reports.css';
 
 type ReportsWorkspaceProps = {
@@ -75,19 +76,7 @@ export function ReportsWorkspace({ graph, assertions, sources, attentionItems, o
     void loadFindings();
   }, []);
 
-  const findingHealth = (finding: FindingRecord) => {
-    const linked = finding.assertion_ids.map((id) => assertionById.get(id)).filter(Boolean) as ParsedAssertionRecord[];
-    const allAccepted = linked.length > 0 && linked.every((assertion) => assertion.review_state === 'accepted');
-    const allSourced = linked.length > 0 && linked.every((assertion) => Boolean(assertion.source_id && sourceById.has(assertion.source_id)));
-    const sourceIds = new Set(linked.map((assertion) => assertion.source_id).filter(Boolean));
-    return {
-      linked,
-      allAccepted,
-      allSourced,
-      reportReady: finding.status === 'reviewed' && allAccepted && allSourced,
-      sourceCount: sourceIds.size
-    };
-  };
+  const findingHealth = (finding: FindingRecord) => deriveFindingHealth(finding, assertionById, sourceById);
 
   const reviewedReady = findings.filter((finding) => findingHealth(finding).reportReady);
   const findingSourceIds = new Set(
