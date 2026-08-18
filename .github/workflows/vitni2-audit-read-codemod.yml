@@ -1,0 +1,62 @@
+name: Vitni 2 audit read codemod
+
+on:
+  push:
+    branches: [agent/vitni-2-attention-evidence]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/vitni-2-attention-evidence
+          fetch-depth: 0
+      - name: Add subject-scoped audit history API
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Expected snippet not found in {path}')
+              p.write_text(text.replace(old, new, 1))
+
+          main = Path('app/main/ipc/index.ts')
+          text = main.read_text()
+          marker = "  // Transform execution records both the enrichment result and the consent\n"
+          handler = "  ipcMain.handle(\n    'db:audit:by-subject',\n    withDb(projectManager, (db, subjectKind: string, subjectId: string) => {\n      return db\n        .prepare(\n          `SELECT id, action, subject_kind, subject_id, actor, reason, transform_run_id, created_at\n           FROM audit\n           WHERE subject_kind = ? AND subject_id = ?\n           ORDER BY created_at DESC\n           LIMIT 50`\n        )\n        .all(subjectKind, subjectId) as AuditRecord[];\n    })\n  );\n\n"
+          if marker not in text:
+              raise SystemExit('Main audit insertion marker missing')
+          main.write_text(text.replace(marker, handler + marker, 1))
+
+          replace(
+              'app/preload/preload.ts',
+              "    recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) =>\n      ipcRenderer.invoke('db:audit:record', payload),",
+              "    recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) =>\n      ipcRenderer.invoke('db:audit:record', payload),\n    listAuditBySubject: (subjectKind: string, subjectId: string): Promise<AuditRecord[]> =>\n      ipcRenderer.invoke('db:audit:by-subject', subjectKind, subjectId),"
+          )
+          replace(
+              'app/renderer/src/services/piBridge.ts',
+              "  loadGraph(): Promise<GraphSnapshot> {\n    return window.piBridge.loadGraph();\n  },",
+              "  loadGraph(): Promise<GraphSnapshot> {\n    return window.piBridge.loadGraph();\n  },\n  listAuditBySubject(subjectKind: string, subjectId: string): Promise<import('@shared/types').AuditRecord[]> {\n    return window.piBridge.listAuditBySubject(subjectKind, subjectId);\n  },"
+          )
+          replace(
+              'app/renderer/src/global.d.ts',
+              "  recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) => Promise<string>;",
+              "  recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) => Promise<string>;\n  listAuditBySubject: (subjectKind: string, subjectId: string) => Promise<AuditRecord[]>;"
+          )
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          git rm .github/workflows/vitni2-audit-read-codemod.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/main/ipc/index.ts app/preload/preload.ts app/renderer/src/services/piBridge.ts app/renderer/src/global.d.ts
+          git commit -m "feat: expose assertion audit history"
+          git push origin HEAD:agent/vitni-2-attention-evidence
