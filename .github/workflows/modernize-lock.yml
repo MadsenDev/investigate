@@ -1,5 +1,6 @@
 name: Modernize lockfile
 
+# Temporary branch-only helper. Removed once npm has produced the upgraded lockfile.
 on:
   push:
     branches: [agent/modernize-stack]
