@@ -2,11 +2,26 @@ import type { IpcMain } from 'electron';
 import { randomUUID } from 'node:crypto';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
-import type { FindingRecord, FindingStatus } from '../../../shared/types';
+import type { AssertionRecord, FindingRecord, FindingStatus } from '../../../shared/types';
 import type { DbConnection } from '../persistence/database';
 import type { ProjectManager } from '../projectManager';
 
 type FindingRow = Omit<FindingRecord, 'assertion_ids'>;
+type AssertionBundleRow = Pick<
+  AssertionRecord,
+  | 'id'
+  | 'subject_kind'
+  | 'subject_id'
+  | 'path'
+  | 'value_json'
+  | 'source_id'
+  | 'confidence'
+  | 'review_state'
+  | 'review_note'
+  | 'reviewed_by'
+  | 'reviewed_at'
+  | 'created_at'
+>;
 
 type FindingCreatePayload = {
   title: string;
@@ -82,7 +97,7 @@ function findingBundle(db: DbConnection, projectManager: ProjectManager) {
       `SELECT id, subject_kind, subject_id, path, value_json, source_id, confidence, review_state,
               review_note, reviewed_by, reviewed_at, created_at
        FROM assertion ORDER BY id ASC`
-    ).all() as Array<Record<string, unknown>>).map((row) => [String(row.id), row])
+    ).all() as AssertionBundleRow[]).map((row) => [row.id, row])
   );
   const sourceById = new Map(
     (db.prepare(
@@ -95,14 +110,14 @@ function findingBundle(db: DbConnection, projectManager: ProjectManager) {
     assertReviewable(db, finding.assertion_ids);
     const assertions = finding.assertion_ids
       .map((id) => assertionById.get(id))
-      .filter((value): value is Record<string, unknown> => Boolean(value))
+      .filter((value): value is AssertionBundleRow => Boolean(value))
       .map((assertion) => ({
         ...assertion,
         value: (() => {
-          try { return JSON.parse(String(assertion.value_json ?? '{}')); } catch { return {}; }
+          try { return JSON.parse(assertion.value_json || '{}') as unknown; } catch { return {}; }
         })(),
         value_json: undefined,
-        source: sourceById.get(String(assertion.source_id)) ?? null
+        source: sourceById.get(assertion.source_id) ?? null
       }));
     return { ...finding, assertions };
   });
@@ -110,7 +125,7 @@ function findingBundle(db: DbConnection, projectManager: ProjectManager) {
   const sourceIds = new Set<string>();
   for (const finding of bundleFindings) {
     for (const assertion of finding.assertions) {
-      if (assertion.source_id) sourceIds.add(String(assertion.source_id));
+      if (assertion.source_id) sourceIds.add(assertion.source_id);
     }
   }
   const sources = Array.from(sourceIds).sort().map((id) => sourceById.get(id)).filter(Boolean);
@@ -140,9 +155,9 @@ function markdownForBundle(bundle: ReturnType<typeof findingBundle>): string {
     finding.assertions.forEach((assertion, assertionIndex) => {
       const source = assertion.source as Record<string, unknown> | null;
       lines.push(
-        `${assertionIndex + 1}. **${String(assertion.path)}** — ${JSON.stringify(assertion.value)}`,
-        `   - Assertion ID: \`${String(assertion.id)}\``,
-        `   - Review: ${String(assertion.review_state)} · Confidence: ${String(assertion.confidence)}`,
+        `${assertionIndex + 1}. **${assertion.path}** — ${JSON.stringify(assertion.value)}`,
+        `   - Assertion ID: \`${assertion.id}\``,
+        `   - Review: ${assertion.review_state} · Confidence: ${assertion.confidence}`,
         source
           ? `   - Source: ${String(source.title || source.display_name || source.file_name || source.locator)} (\`${String(source.id)}\`)`
           : '   - Source: **missing**',
