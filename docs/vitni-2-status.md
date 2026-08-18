@@ -54,6 +54,7 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Unsupported assertions cannot be accepted until their source resolves.
 - ✅ Review state and confidence are deliberately separate: accepted + unverified claims remain as explicit verification work.
 - ✅ Rejected claims are completed analyst decisions and leave Needs Attention.
+- ✅ Assertion-scoped audit history is readable in the resolution panel, preserving prior review/evidence decisions instead of showing only current state.
 - ⏳ Future: stale-review detection, source-content contradiction modelling, missing-field attention and AI suggestion review.
 
 ### Entities / Assertions / Sources
@@ -163,9 +164,9 @@ These currently show an explicit migration state or remain accessible through le
 - ✅ Assertions can attach or replace an existing evidence source in place, preserving assertion identity.
 - ✅ Evidence relinking validates source existence in the main process.
 - ✅ Review notes, review metadata, confidence changes, and evidence-link decisions are persisted/audited.
+- ✅ Assertion review/evidence audit history is readable directly from the resolution panel.
 - ✅ Evidence intake surfaces unlinked sources and deterministic duplicate signals.
 - ⏳ Full source-content contradiction modelling remains future work.
-- ⏳ Rich review-history presentation remains future work.
 - ⏳ Unified preview/extraction staging before case mutation remains future work.
 
 ### PR #20 — Graph + timeline investigation flow
