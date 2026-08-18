@@ -36,17 +36,43 @@ function replaceFindingAssertions(db: DbConnection, findingId: string, assertion
   assertionIds.forEach((assertionId, index) => insert.run(findingId, assertionId, index));
 }
 
+function listFindingAssertionIds(db: DbConnection, findingId: string): string[] {
+  return (db.prepare(
+    'SELECT assertion_id FROM finding_assertion WHERE finding_id = ? ORDER BY position ASC, assertion_id ASC'
+  ).all(findingId) as Array<{ assertion_id: string }>).map((item) => item.assertion_id);
+}
+
+function assertReviewable(db: DbConnection, assertionIds: string[]) {
+  if (assertionIds.length === 0) throw new Error('A reviewed finding must link at least one assertion');
+  const read = db.prepare(
+    `SELECT a.review_state, a.source_id, s.id AS resolved_source_id
+     FROM assertion a
+     LEFT JOIN source s ON s.id = a.source_id
+     WHERE a.id = ?`
+  );
+  for (const assertionId of assertionIds) {
+    const row = read.get(assertionId) as { review_state: string; source_id: string; resolved_source_id: string | null } | undefined;
+    if (!row) throw new Error(`Assertion does not exist: ${assertionId}`);
+    if (row.review_state !== 'accepted') throw new Error('All assertions supporting a reviewed finding must be accepted');
+    if (!row.source_id || !row.resolved_source_id) throw new Error('All assertions supporting a reviewed finding must resolve to evidence');
+  }
+}
+
 function listFindings(db: DbConnection): FindingRecord[] {
   const rows = db.prepare(
     'SELECT id, title, body, status, created_at, updated_at FROM finding ORDER BY updated_at DESC, id ASC'
   ).all() as FindingRow[];
-  const links = db.prepare(
-    'SELECT assertion_id FROM finding_assertion WHERE finding_id = ? ORDER BY position ASC, assertion_id ASC'
-  );
   return rows.map((row) => ({
     ...row,
-    assertion_ids: (links.all(row.id) as Array<{ assertion_id: string }>).map((item) => item.assertion_id)
+    assertion_ids: listFindingAssertionIds(db, row.id)
   }));
+}
+
+function recordFindingAudit(db: DbConnection, findingId: string, action: string, reason: string | null = null) {
+  db.prepare(
+    `INSERT INTO audit (id, action, subject_kind, subject_id, actor, reason, transform_run_id, created_at)
+     VALUES (?, ?, 'finding', ?, 'user', ?, NULL, ?)`
+  ).run(randomUUID(), action, findingId, reason, Math.floor(Date.now() / 1000));
 }
 
 function findingBundle(db: DbConnection, projectManager: ProjectManager) {
@@ -66,6 +92,7 @@ function findingBundle(db: DbConnection, projectManager: ProjectManager) {
   );
 
   const bundleFindings = findings.map((finding) => {
+    assertReviewable(db, finding.assertion_ids);
     const assertions = finding.assertion_ids
       .map((id) => assertionById.get(id))
       .filter((value): value is Record<string, unknown> => Boolean(value))
@@ -109,10 +136,6 @@ function markdownForBundle(bundle: ReturnType<typeof findingBundle>): string {
   ];
   bundle.findings.forEach((finding, findingIndex) => {
     lines.push(`## F${findingIndex + 1}. ${finding.title}`, '', finding.body || '_No narrative recorded._', '');
-    if (finding.assertions.length === 0) {
-      lines.push('**Warning:** this reviewed finding has no linked assertions.', '');
-      return;
-    }
     lines.push('### Supporting assertions', '');
     finding.assertions.forEach((assertion, assertionIndex) => {
       const source = assertion.source as Record<string, unknown> | null;
@@ -158,6 +181,7 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
         'INSERT INTO finding (id, title, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
       ).run(id, title, payload.body?.trim() ?? '', 'draft', now, now);
       replaceFindingAssertions(db, id, assertionIds);
+      recordFindingAudit(db, id, 'finding.create', assertionIds.length ? `${assertionIds.length} supporting assertion(s)` : null);
     });
     create();
     return id;
@@ -170,8 +194,10 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
     if (updates.status && !VALID_STATUSES.has(updates.status)) throw new Error('Invalid finding status');
     if (updates.title !== undefined && !updates.title.trim()) throw new Error('Finding title is required');
     const assertionIds = updates.assertion_ids === undefined ? null : normalizeAssertionIds(db, updates.assertion_ids);
+    const effectiveAssertionIds = assertionIds ?? listFindingAssertionIds(db, findingId);
+    if (updates.status === 'reviewed') assertReviewable(db, effectiveAssertionIds);
     const update = db.transaction(() => {
-      const current = db.prepare('SELECT title, body, status FROM finding WHERE id = ?').get(findingId) as FindingRow;
+      const current = db.prepare('SELECT title, body, status FROM finding WHERE id = ?').get(findingId) as Pick<FindingRow, 'title' | 'body' | 'status'>;
       db.prepare(
         'UPDATE finding SET title = ?, body = ?, status = ?, updated_at = ? WHERE id = ?'
       ).run(
@@ -182,13 +208,23 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
         findingId
       );
       if (assertionIds) replaceFindingAssertions(db, findingId, assertionIds);
+      const reasons: string[] = [];
+      if (updates.status) reasons.push(`status=${updates.status}`);
+      if (assertionIds) reasons.push(`assertions=${assertionIds.length}`);
+      if (updates.title !== undefined) reasons.push('title updated');
+      if (updates.body !== undefined) reasons.push('body updated');
+      recordFindingAudit(db, findingId, 'finding.update', reasons.join(', ') || null);
     });
     update();
     return true;
   });
 
   ipcMain.handle('db:finding:delete', (_event, findingId: string) => {
-    const result = projectManager.getDatabase().prepare('DELETE FROM finding WHERE id = ?').run(findingId);
+    const db = projectManager.getDatabase();
+    const existing = db.prepare('SELECT title FROM finding WHERE id = ?').get(findingId) as { title: string } | undefined;
+    if (!existing) return false;
+    recordFindingAudit(db, findingId, 'finding.delete', existing.title);
+    const result = db.prepare('DELETE FROM finding WHERE id = ?').run(findingId);
     return result.changes > 0;
   });
 
@@ -200,6 +236,7 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
     await fsp.mkdir(outputDir, { recursive: true });
     await fsp.writeFile(path.join(outputDir, 'findings-evidence.json'), `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
     await fsp.writeFile(path.join(outputDir, 'findings-evidence.md'), markdownForBundle(bundle), 'utf8');
+    recordFindingAudit(db, bundle.case.id, 'findings.export', `${bundle.findings.length} finding(s), ${bundle.sources.length} source(s)`);
     return { outputDir, findingCount: bundle.findings.length, sourceCount: bundle.sources.length };
   });
 }
