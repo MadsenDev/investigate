@@ -26,6 +26,7 @@ export type EntityType =
 
 export type Confidence = 'asserted' | 'unverified' | 'verified';
 export type AssertionReviewState = 'unreviewed' | 'accepted' | 'disputed' | 'rejected';
+export type FindingStatus = 'draft' | 'reviewed' | 'disputed' | 'withdrawn';
 
 export interface EntityRecord {
   id: string;
@@ -99,6 +100,16 @@ export interface AssertionRecord {
   reviewed_by?: string | null;
   reviewed_at?: number | null;
   created_at: number;
+}
+
+export interface FindingRecord {
+  id: string;
+  title: string;
+  body: string;
+  status: FindingStatus;
+  created_at: number;
+  updated_at: number;
+  assertion_ids: string[];
 }
 
 export interface TransformRunRecord {
