@@ -1,0 +1,55 @@
+name: Vitni 2 findings docs wiring
+
+on:
+  push:
+    branches: [agent/vitni-2-findings-reporting]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/vitni-2-findings-reporting
+          fetch-depth: 0
+      - name: Update implementation ledger and changelog
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path('docs/vitni-2-status.md')
+          text = p.read_text()
+          text = text.replace('### PR #20 — Graph + timeline investigation flow (active)', '### PR #20 — Graph + timeline investigation flow (merged)')
+          old_reports = """### Reports\n\n- ✅ Dedicated Reports workspace.\n- ✅ Shows accepted assertions, cited sources and high-priority unresolved attention items.\n- ✅ Existing report generator remains functional through a bridge.\n- ✅ UI communicates the intended Evidence → Assertion → Finding → Report chain.\n- ⏳ Durable Finding model/workflow.\n- ⏳ Deterministic citation/evidence appendix model.\n- ⏳ Reproducible report/export bundles.\n- ⏳ AI narrative assistance only after deterministic findings/citations are established.\n"""
+          new_reports = """### Findings / Reports\n\n- ✅ Dedicated Findings & Reports workspace.\n- ✅ Durable `finding` + `finding_assertion` persistence model added in migration 007.\n- ✅ Finding states: draft, reviewed, disputed, withdrawn.\n- ✅ Main-process invariant prevents reviewed findings without accepted, resolvable supporting assertions.\n- ✅ Finding readiness is recalculated from live assertion/source state and covered by unit tests.\n- ✅ Investigators can create findings, attach/remove accepted assertions, inspect assertion → source provenance, and change finding state.\n- ✅ Deterministic `vitni-findings-evidence-v1` JSON provenance export.\n- ✅ Human-readable Markdown provenance export with evidence appendix.\n- ✅ Existing narrative report generator now writes the same provenance files into every generated report directory.\n- ✅ Finding actions and standalone provenance exports write audit events.\n- ✅ Full design/contract documented in `docs/vitni-2-findings.md`.\n- ⏳ Inline citation labels/anchors inside narrative HTML/PDF remain presentation follow-up work.\n- ⏳ Optional AI narrative must consume reviewed findings only and remain downstream of deterministic provenance.\n"""
+          if old_reports not in text:
+              raise SystemExit('Reports section marker missing')
+          text = text.replace(old_reports, new_reports, 1)
+          old_pr21 = """### PR #21 — Findings + reporting\n\n- durable finding concept if the existing schema cannot express it cleanly\n- deterministic finding → assertion → source provenance\n- report citations/evidence appendix\n- reproducible export bundle\n- optional AI narrative on top, never as source of truth\n"""
+          new_pr21 = """### PR #21 — Findings + reporting (active)\n\n- ✅ durable finding + support-link schema\n- ✅ finding CRUD and reviewability invariant through Electron IPC\n- ✅ deterministic finding → assertion → source provenance\n- ✅ JSON + Markdown evidence appendix/export bundle\n- ✅ provenance files included beside generated narrative reports\n- ✅ finding readiness tests\n- ✅ finding/reporting contract documented in `docs/vitni-2-findings.md`\n- ⏳ validate migration + export against Operation Glass Harbor in CI/manual smoke\n- ⏳ narrative citation anchors remain a presentation follow-up rather than a source-of-truth requirement\n"""
+          if old_pr21 not in text:
+              raise SystemExit('PR21 marker missing')
+          text = text.replace(old_pr21, new_pr21, 1)
+          p.write_text(text)
+
+          p = Path('CHANGELOG.md')
+          text = p.read_text()
+          marker = '- Added Evidence intake health signals for unlinked material and probable duplicate sources based on exact file hashes or normalized locators.\n'
+          addition = marker + '- Added durable Vitni 2 Findings with explicit assertion support links, reviewed/disputed/withdrawn states, report-readiness validation, audit history, and deterministic JSON/Markdown evidence bundles.\n- Generated narrative reports now include the deterministic reviewed-finding provenance files beside the HTML output, keeping optional prose/AI presentation downstream of the evidence chain.\n'
+          if 'Added durable Vitni 2 Findings' not in text:
+              if marker not in text: raise SystemExit('Changelog marker missing')
+              text = text.replace(marker, addition, 1)
+          p.write_text(text)
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          git rm .github/workflows/vitni2-findings-docs-wire.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/vitni-2-status.md CHANGELOG.md
+          git commit -m "docs: record Vitni 2 findings progress"
+          git push origin HEAD:agent/vitni-2-findings-reporting
