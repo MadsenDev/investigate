@@ -70,6 +70,7 @@ export const piBridge = {
     assertionId: string,
     updates: {
       value?: Record<string, unknown>;
+      source_id?: string;
       confidence?: AssertionRecord['confidence'];
       review_state?: AssertionReviewState;
       review_note?: string | null;

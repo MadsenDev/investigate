@@ -133,6 +133,7 @@ interface AssertionPayload {
 
 interface UpdateAssertionPayload {
   value?: Record<string, unknown>;
+  source_id?: string;
   confidence?: AssertionRecord['confidence'];
   review_state?: AssertionReviewState;
   review_note?: string | null;
@@ -977,6 +978,15 @@ export function registerIpcHandlers(
       if (updates.value !== undefined) {
         updatesList.push('value_json = @value_json');
         params.value_json = JSON.stringify(updates.value ?? {});
+      }
+
+      if (updates.source_id !== undefined) {
+        const source = db.prepare('SELECT id FROM source WHERE id = ? LIMIT 1').get(updates.source_id) as { id: string } | undefined;
+        if (!source) {
+          throw new Error('Cannot attach assertion to a source that does not exist');
+        }
+        updatesList.push('source_id = @source_id');
+        params.source_id = updates.source_id;
       }
 
       if (updates.confidence !== undefined) {

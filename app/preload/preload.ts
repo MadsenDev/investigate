@@ -45,7 +45,7 @@ function createBridge() {
     }) => ipcRenderer.invoke('db:assertion:create', payload),
     updateAssertion: (
       assertionId: string,
-      updates: { value?: Record<string, unknown>; confidence?: AssertionRecord['confidence'] }
+      updates: { value?: Record<string, unknown>; source_id?: string; confidence?: AssertionRecord['confidence']; review_state?: AssertionRecord['review_state']; review_note?: string | null; reviewed_by?: string | null; reviewed_at?: number | null }
     ) => ipcRenderer.invoke('db:assertion:update', assertionId, updates),
     deleteAssertion: (assertionId: string) => ipcRenderer.invoke('db:assertion:delete', assertionId),
     updateSource: (
