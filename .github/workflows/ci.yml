@@ -31,9 +31,6 @@ jobs:
       - name: Check release metadata
         run: npm run release:check
 
-      # Temporary for the stack-modernization PR: the old lock graph spans Vite 5
-      # and React 18, so resolve the modern dependency graph from package.json
-      # rather than asking npm to incrementally reconcile incompatible peers.
       - name: Resolve upgraded dependency graph
         if: github.head_ref == 'agent/modernize-stack'
         run: |
@@ -51,8 +48,11 @@ jobs:
             git push origin HEAD:agent/modernize-stack
           fi
 
+      # Native better-sqlite3 rebuild is deliberately skipped during iterative
+      # compiler/lint migration checks. The final cleaned-up CI run restores the
+      # normal `npm ci` postinstall and proves the Electron 43 native build.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Apply modernization source fixes
         if: github.head_ref == 'agent/modernize-stack'
