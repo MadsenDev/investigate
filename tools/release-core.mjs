@@ -50,7 +50,11 @@ export function releaseChangelog(text, version, date) {
   const unreleased = text.slice(after, nextHeading < 0 ? text.length : nextHeading).trim();
   if (!unreleased) throw new Error('CHANGELOG.md [Unreleased] is empty.');
   const suffix = nextHeading < 0 ? '' : text.slice(nextHeading);
-  return `${text.slice(0, after)}\n\n${unreleased}\n\n## [${version}] - ${date}${suffix}\n`;
+
+  // Leave a fresh Unreleased section in place and move its previous contents
+  // under the new dated release heading. The old implementation accidentally
+  // left those notes above the new heading, producing an empty release section.
+  return `${text.slice(0, after)}\n\n## [${version}] - ${date}\n\n${unreleased}${suffix}\n`;
 }
 
 export function extractNotes(text, version) {
