@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { Vitni2App } from './v2/Vitni2App';
+import { Vitni2ErrorBoundary } from './v2/components/Vitni2ErrorBoundary';
 import './index.css';
 
 const queryUi = new URLSearchParams(window.location.search).get('ui');
@@ -13,6 +14,12 @@ const useVitni2 = queryUi === 'v2' || (queryUi !== 'legacy' && persistedUi === '
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    {useVitni2 ? <Vitni2App /> : <App />}
+    {useVitni2 ? (
+      <Vitni2ErrorBoundary>
+        <Vitni2App />
+      </Vitni2ErrorBoundary>
+    ) : (
+      <App />
+    )}
   </React.StrictMode>
 );
