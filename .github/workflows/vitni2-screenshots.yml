@@ -1,0 +1,92 @@
+name: Vitni 2 Screenshots
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/main/**'
+      - 'app/preload/**'
+      - 'app/renderer/src/v2/**'
+      - 'app/renderer/src/features/**'
+      - 'app/renderer/src/components/**'
+      - 'shared/**'
+      - 'samples/operation-glass-harbor.vitni/**'
+      - '.github/workflows/vitni2-screenshots.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/main/**'
+      - 'app/preload/**'
+      - 'app/renderer/src/v2/**'
+      - 'app/renderer/src/features/**'
+      - 'app/renderer/src/components/**'
+      - 'shared/**'
+      - 'samples/operation-glass-harbor.vitni/**'
+      - '.github/workflows/vitni2-screenshots.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vitni2-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture real Vitni 2 workspaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb sqlite3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Prepare showcase investigation
+        run: |
+          rm -f samples/operation-glass-harbor.vitni/db/case.sqlite
+          rm -f samples/operation-glass-harbor.vitni/db/case.sqlite-wal
+          rm -f samples/operation-glass-harbor.vitni/db/case.sqlite-shm
+          sqlite3 samples/operation-glass-harbor.vitni/db/case.sqlite < samples/operation-glass-harbor.vitni/db/case.sqlite.sql
+
+      - name: Capture workspaces
+        env:
+          NODE_ENV: production
+          PI_DB_KEY: circuit-ledger-demo
+          VITNI_SCREENSHOT_PROJECT: ${{ github.workspace }}/samples/operation-glass-harbor.vitni
+          VITNI_SCREENSHOT_DIR: ${{ github.workspace }}/artifacts/vitni2-screenshots
+        run: xvfb-run -a ./node_modules/.bin/electron . --no-sandbox
+
+      - name: Verify screenshot set
+        run: |
+          expected='overview graph timeline entities assertions sources attention evidence reports search'
+          for workspace in $expected; do
+            test -s "artifacts/vitni2-screenshots/${workspace}.png" || {
+              echo "Missing screenshot: ${workspace}.png"
+              exit 1
+            }
+          done
+          ls -lh artifacts/vitni2-screenshots
+
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitni2-screenshots
+          path: artifacts/vitni2-screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
