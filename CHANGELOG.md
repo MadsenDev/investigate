@@ -6,6 +6,18 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 
 ## [Unreleased]
 
+### Added
+
+- Added pull-request and `main` CI covering release metadata, linting, type checking, renderer tests, and production builds.
+- Added unified release tooling that validates and prepares `package.json`, `package-lock.json`, the sample case manifest, and `CHANGELOG.md` together, and can extract release notes for GitHub Releases.
+- Added a tag/manual Release workflow that packages Linux and Windows builds, publishes checksums, and creates GitHub build-provenance attestations before publishing the release.
+- Added a near-term Vitni product and engineering roadmap focused on evidence/source workflows, investigation UX, intake, reporting, and case integrity.
+
+### Changed
+
+- Modernized the existing release packaging workflow so releases are gated by matching version/changelog metadata instead of starting only after a GitHub Release is manually created.
+- Kept the existing `version:patch`, `version:minor`, and `version:major` commands as aliases for the unified release preparation flow.
+
 ## [0.6.0]
 
 ### Added
@@ -77,12 +89,3 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 ## [0.1.1]
 
 ### Changed
-
-- Packaged Linux and Windows artifacts were rebuilt after packaging and startup fixes.
-- Canvas personalization gained separate background-image blur control.
-
-## [0.1.0]
-
-### Added
-
-- Initial packaged Vitni desktop release.
