@@ -43,3 +43,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # One-time proof for the stack modernization. Removed after it passes so
+      # ordinary Vitni PRs do not pay the cost of packaging on every change.
+      - name: Package Linux smoke test
+        if: github.head_ref == 'agent/modernize-stack'
+        run: npm run package:linux

@@ -74,7 +74,7 @@ Cover:
 - Increase coverage outside the renderer. Main-process persistence, migrations, IPC boundaries, transforms, and report generation deserve direct tests.
 - Add fixture-based migration tests covering representative historical case databases.
 - Add smoke tests that create/open a case, write core entities/assertions, reopen it, and export a report.
-- Audit Electron/Node/dependency versions before 1.0 and update intentionally rather than opportunistically.
+- The runtime/toolchain modernization is now established on Node 22+, Electron 43, React 19, Vite 8, TypeScript 5.9, and Vitest 4. Follow up separately on the remaining tooling-only migrations such as ESLint flat config and whether Tailwind 4 is worth the CSS migration cost.
 - Keep `CHANGELOG.md` current under `[Unreleased]`; CI now treats release metadata as part of correctness.
 
 ## Release workflow

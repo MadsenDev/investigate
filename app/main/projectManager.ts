@@ -69,7 +69,7 @@ interface ProjectContext {
   dbProvider: DatabaseProvider;
 }
 
-interface SourceRow extends SourceRecord {}
+type SourceRow = SourceRecord;
 
 type MediaUploadPayload = {
   fileName: string;

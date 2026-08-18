@@ -37,7 +37,7 @@ interface GraphWorkspaceProps {
   boxSelectEnabled: boolean;
   filtersOpen: boolean;
   filterAnchor: DOMRect | null;
-  filterRef: React.RefObject<HTMLDivElement>;
+  filterRef: React.RefObject<HTMLDivElement | null>;
   activeTypeIds: Set<string>;
   hasSourcesOnly: boolean;
   searchOpen: boolean;
