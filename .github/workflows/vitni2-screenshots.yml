@@ -65,15 +65,30 @@ jobs:
           sqlite3 samples/operation-glass-harbor.vitni/db/case.sqlite < samples/operation-glass-harbor.vitni/db/case.sqlite.sql
 
       - name: Capture workspaces
+        id: capture
+        continue-on-error: true
         env:
           NODE_ENV: production
           PI_DB_KEY: circuit-ledger-demo
           VITNI_SCREENSHOT_PROJECT: ${{ github.workspace }}/samples/operation-glass-harbor.vitni
           VITNI_SCREENSHOT_DIR: ${{ github.workspace }}/artifacts/vitni2-screenshots
-        run: xvfb-run -a ./node_modules/.bin/electron . --no-sandbox
+        run: timeout 90s xvfb-run -a ./node_modules/.bin/electron . --no-sandbox
+
+      - name: Upload screenshot artifact and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitni2-screenshots
+          path: artifacts/vitni2-screenshots/*
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Verify screenshot set
         run: |
+          if [ '${{ steps.capture.outcome }}' != 'success' ]; then
+            echo 'Electron screenshot capture failed; inspect the uploaded diagnostics artifact.'
+            exit 1
+          fi
           expected='overview graph timeline entities assertions sources attention evidence reports search'
           for workspace in $expected; do
             test -s "artifacts/vitni2-screenshots/${workspace}.png" || {
@@ -82,11 +97,3 @@ jobs:
             }
           done
           ls -lh artifacts/vitni2-screenshots
-
-      - name: Upload screenshot artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vitni2-screenshots
-          path: artifacts/vitni2-screenshots/*.png
-          if-no-files-found: error
-          retention-days: 14
