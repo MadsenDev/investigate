@@ -3,6 +3,7 @@ import type { SourceWithUsage } from '@shared/types';
 import type { GraphSnapshot } from '@renderer/types/graph';
 import { displayNameForNode } from '@renderer/features/graph/labeling';
 import type { InvestigationSelection } from '../types';
+import './evidence-reports.css';
 
 type EvidenceWorkspaceProps = {
   graph: GraphSnapshot;
