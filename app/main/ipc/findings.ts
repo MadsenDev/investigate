@@ -201,21 +201,21 @@ export function registerFindingHandlers(ipcMain: IpcMain, projectManager: Projec
 
   ipcMain.handle('db:finding:update', (_event, findingId: string, updates: FindingUpdatePayload) => {
     const db = projectManager.getDatabase();
-    const existing = db.prepare('SELECT id FROM finding WHERE id = ? LIMIT 1').get(findingId);
-    if (!existing) throw new Error(`Finding does not exist: ${findingId}`);
+    const current = db.prepare('SELECT title, body, status FROM finding WHERE id = ? LIMIT 1').get(findingId) as Pick<FindingRow, 'title' | 'body' | 'status'> | undefined;
+    if (!current) throw new Error(`Finding does not exist: ${findingId}`);
     if (updates.status && !VALID_STATUSES.has(updates.status)) throw new Error('Invalid finding status');
     if (updates.title !== undefined && !updates.title.trim()) throw new Error('Finding title is required');
     const assertionIds = updates.assertion_ids === undefined ? null : normalizeAssertionIds(db, updates.assertion_ids);
     const effectiveAssertionIds = assertionIds ?? listFindingAssertionIds(db, findingId);
-    if (updates.status === 'reviewed') assertReviewable(db, effectiveAssertionIds);
+    const effectiveStatus = updates.status ?? current.status;
+    if (effectiveStatus === 'reviewed') assertReviewable(db, effectiveAssertionIds);
     const update = db.transaction(() => {
-      const current = db.prepare('SELECT title, body, status FROM finding WHERE id = ?').get(findingId) as Pick<FindingRow, 'title' | 'body' | 'status'>;
       db.prepare(
         'UPDATE finding SET title = ?, body = ?, status = ?, updated_at = ? WHERE id = ?'
       ).run(
         updates.title?.trim() ?? current.title,
         updates.body?.trim() ?? current.body,
-        updates.status ?? current.status,
+        effectiveStatus,
         Math.floor(Date.now() / 1000),
         findingId
       );
