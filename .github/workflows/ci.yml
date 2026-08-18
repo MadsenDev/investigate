@@ -29,6 +29,20 @@ jobs:
       - name: Check release metadata
         run: npm run release:check
 
+      # Temporary for the stack-modernization PR: resolve the new dependency
+      # graph in CI so npm, not hand editing, produces package-lock.json.
+      - name: Resolve upgraded dependency graph
+        if: github.head_ref == 'agent/modernize-stack'
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Capture upgraded lockfile
+        if: github.head_ref == 'agent/modernize-stack'
+        uses: actions/upload-artifact@v4
+        with:
+          name: modernized-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+
       - name: Install dependencies
         run: npm ci
 
