@@ -52,8 +52,10 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Selecting an item opens the same assertion Inspector used elsewhere.
 - ✅ Accept / Dispute / Reject write through the existing assertion review API.
 - ✅ Unsupported assertions cannot be accepted until their source resolves.
-- ⚠️ Accepted assertions may remain in Needs Attention when confidence is still `unverified`; this is intentional until review/confidence semantics are refined.
-- ⏳ Future: stale-review detection, source-to-source contradiction model, duplicate/missing-field attention and AI suggestion review.
+- ✅ Review state and confidence are deliberately separate: accepted + unverified claims remain as explicit verification work.
+- ✅ Rejected claims are completed analyst decisions and leave Needs Attention.
+- ✅ Assertion-scoped audit history is readable in the resolution panel, preserving prior review/evidence decisions instead of showing only current state.
+- ⏳ Future: stale-review detection, source-content contradiction modelling, missing-field attention and AI suggestion review.
 
 ### Entities / Assertions / Sources
 
@@ -108,9 +110,10 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Existing CSV import is available from the new workspace.
 - ✅ Existing source-attachment flow can attach evidence to the currently selected entity/event.
 - ✅ Existing media-library selection flow is preserved when attaching an existing source.
+- ✅ Evidence intake surfaces unlinked material and probable duplicate source groups using deterministic hash/locator checks.
 - ⏳ Unified preview/extraction review flow.
 - ⏳ Suggested entity/event/assertion staging before mutation.
-- ⏳ Duplicate/conflict checks during intake.
+- ⏳ Richer contradiction signals between source contents/claims.
 
 ### Reports
 
@@ -126,7 +129,7 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 ## Visual capture / screenshot infrastructure
 
 - ✅ PR #17 is merged and Vitni 2 foundation is now on `main`.
-- 🚧 PR #18 adds deterministic real-Electron screenshot capture.
+- ✅ PR #18 is merged and provides deterministic real-Electron screenshot capture infrastructure.
 - ✅ Screenshot mode opens the repository showcase investigation before renderer boot and forces Vitni 2.
 - ✅ Capture uses Electron `webContents.capturePage()` rather than a browser mock.
 - ✅ Fixed screenshot viewport: 1600×1000.
@@ -153,16 +156,18 @@ These currently show an explicit migration state or remain accessible through le
 
 ## Recommended next work
 
-### PR #19 — Attention + evidence workflow depth
+### PR #19 — Attention + evidence workflow depth (active)
 
-- make `Needs Attention` the primary quality-control workflow rather than an abstract review queue
-- refine review/confidence interaction so accepting a claim has predictable semantics
-- attach or replace a source directly from assertion attention context
-- expose supporting and conflicting evidence together when reviewing a claim
-- add review-note editing and useful review history presentation
-- add evidence preview/intake staging before case mutation
-- add duplicate/conflict signals based on evidence rather than synthetic UI state
-- make successful resolution remove or reclassify the attention item immediately
+- ✅ `Needs Attention` now exposes evidence and analyst-decision context instead of acting as an abstract queue.
+- ✅ Review state and confidence are separate, explicit axes; accepted + unverified claims remain as verification work.
+- ✅ Rejected claims are completed decisions and leave the queue.
+- ✅ Assertions can attach or replace an existing evidence source in place, preserving assertion identity.
+- ✅ Evidence relinking validates source existence in the main process.
+- ✅ Review notes, review metadata, confidence changes, and evidence-link decisions are persisted/audited.
+- ✅ Assertion review/evidence audit history is readable directly from the resolution panel.
+- ✅ Evidence intake surfaces unlinked sources and deterministic duplicate signals.
+- ⏳ Full source-content contradiction modelling remains future work.
+- ⏳ Unified preview/extraction staging before case mutation remains future work.
 
 ### PR #20 — Graph + timeline investigation flow
 

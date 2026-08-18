@@ -133,6 +133,7 @@ interface AssertionPayload {
 
 interface UpdateAssertionPayload {
   value?: Record<string, unknown>;
+  source_id?: string;
   confidence?: AssertionRecord['confidence'];
   review_state?: AssertionReviewState;
   review_note?: string | null;
@@ -979,6 +980,15 @@ export function registerIpcHandlers(
         params.value_json = JSON.stringify(updates.value ?? {});
       }
 
+      if (updates.source_id !== undefined) {
+        const source = db.prepare('SELECT id FROM source WHERE id = ? LIMIT 1').get(updates.source_id) as { id: string } | undefined;
+        if (!source) {
+          throw new Error('Cannot attach assertion to a source that does not exist');
+        }
+        updatesList.push('source_id = @source_id');
+        params.source_id = updates.source_id;
+      }
+
       if (updates.confidence !== undefined) {
         updatesList.push('confidence = @confidence');
         params.confidence = updates.confidence;
@@ -1110,6 +1120,21 @@ export function registerIpcHandlers(
         created_at: now
       });
       return id;
+    })
+  );
+
+  ipcMain.handle(
+    'db:audit:by-subject',
+    withDb(projectManager, (db, subjectKind: string, subjectId: string) => {
+      return db
+        .prepare(
+          `SELECT id, action, subject_kind, subject_id, actor, reason, transform_run_id, created_at
+           FROM audit
+           WHERE subject_kind = ? AND subject_id = ?
+           ORDER BY created_at DESC
+           LIMIT 50`
+        )
+        .all(subjectKind, subjectId) as AuditRecord[];
     })
   );
 

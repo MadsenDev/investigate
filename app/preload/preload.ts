@@ -45,7 +45,7 @@ function createBridge() {
     }) => ipcRenderer.invoke('db:assertion:create', payload),
     updateAssertion: (
       assertionId: string,
-      updates: { value?: Record<string, unknown>; confidence?: AssertionRecord['confidence'] }
+      updates: { value?: Record<string, unknown>; source_id?: string; confidence?: AssertionRecord['confidence']; review_state?: AssertionRecord['review_state']; review_note?: string | null; reviewed_by?: string | null; reviewed_at?: number | null }
     ) => ipcRenderer.invoke('db:assertion:update', assertionId, updates),
     deleteAssertion: (assertionId: string) => ipcRenderer.invoke('db:assertion:delete', assertionId),
     updateSource: (
@@ -55,6 +55,8 @@ function createBridge() {
     deleteSource: (sourceId: string) => ipcRenderer.invoke('db:source:delete', sourceId),
     recordAudit: (payload: Omit<AuditRecord, 'created_at' | 'id'>) =>
       ipcRenderer.invoke('db:audit:record', payload),
+    listAuditBySubject: (subjectKind: string, subjectId: string): Promise<AuditRecord[]> =>
+      ipcRenderer.invoke('db:audit:by-subject', subjectKind, subjectId),
     listTransforms: (): Promise<TransformRegistry> => ipcRenderer.invoke('transforms:list'),
     executeRemoteTransform: (payload: {
       transformId: string;

@@ -67,8 +67,19 @@ describe('buildAttentionItems', () => {
     expect(items[0].severity).toBe('low');
   });
 
-  it('marks unverified confidence as medium priority', () => {
-    const items = buildAttentionItems([assertion({ confidence: 'unverified' })], [source], graph);
+  it('keeps accepted but unverified claims visible as verification work', () => {
+    const items = buildAttentionItems([assertion({ confidence: 'unverified', review_state: 'accepted' })], [source], graph);
+    expect(items).toHaveLength(1);
+    expect(items[0].reasons).toEqual(['unverified']);
     expect(items[0].severity).toBe('medium');
+  });
+
+  it('treats rejection as a completed review decision even when evidence is missing', () => {
+    const items = buildAttentionItems(
+      [assertion({ source_id: 'missing', confidence: 'unverified', review_state: 'rejected' })],
+      [source],
+      graph
+    );
+    expect(items).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 import type {
   AssertionRecord,
   AssertionReviewState,
+  AuditRecord,
   EntityRecord,
   MediaFolderNode,
   MediaLibraryItem,
@@ -19,6 +20,12 @@ export type ParsedAssertionRecord = Omit<AssertionRecord, 'value_json'> & {
 export const piBridge = {
   loadGraph(): Promise<GraphSnapshot> {
     return window.piBridge.loadGraph();
+  },
+  listAuditBySubject(subjectKind: string, subjectId: string): Promise<AuditRecord[]> {
+    return window.piBridge.listAuditBySubject(subjectKind, subjectId);
+  },
+  recordAudit(payload: Omit<AuditRecord, 'created_at' | 'id'>): Promise<string> {
+    return window.piBridge.recordAudit(payload);
   },
   createEntity(payload: { type: EntityRecord['type']; label: string; properties: Record<string, unknown> }): Promise<string> {
     return window.piBridge.createEntity(payload);
@@ -70,6 +77,7 @@ export const piBridge = {
     assertionId: string,
     updates: {
       value?: Record<string, unknown>;
+      source_id?: string;
       confidence?: AssertionRecord['confidence'];
       review_state?: AssertionReviewState;
       review_note?: string | null;
