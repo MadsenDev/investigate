@@ -1,0 +1,80 @@
+name: Vitni 2 findings wiring
+
+on:
+  push:
+    branches: [agent/vitni-2-findings-reporting]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/vitni-2-findings-reporting
+          fetch-depth: 0
+      - name: Wire finding IPC and renderer bridges
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          # Main IPC registration
+          p = Path('app/main/ipc/index.ts')
+          text = p.read_text()
+          import_marker = "import { openAIService } from '../services/openai';\n"
+          if "from './findings'" not in text:
+              if import_marker not in text: raise SystemExit('IPC import marker missing')
+              text = text.replace(import_marker, import_marker + "import { registerFindingHandlers } from './findings';\n", 1)
+          register_marker = ") {\n  // Native shell helpers keep Electron-specific behavior behind the bridge so\n"
+          if 'registerFindingHandlers(ipcMain, projectManager);' not in text:
+              if register_marker not in text: raise SystemExit('IPC register marker missing')
+              text = text.replace(register_marker, ") {\n  registerFindingHandlers(ipcMain, projectManager);\n\n  // Native shell helpers keep Electron-specific behavior behind the bridge so\n", 1)
+          p.write_text(text)
+
+          # Preload bridge
+          p = Path('app/preload/preload.ts')
+          text = p.read_text()
+          if 'FindingRecord,' not in text:
+              text = text.replace('  EntityRecord,\n', '  EntityRecord,\n  FindingRecord,\n', 1)
+          marker = "    listAuditBySubject: (subjectKind: string, subjectId: string): Promise<AuditRecord[]> =>\n      ipcRenderer.invoke('db:audit:by-subject', subjectKind, subjectId),\n"
+          addition = marker + "    listFindings: (): Promise<FindingRecord[]> => ipcRenderer.invoke('db:findings:list'),\n    createFinding: (payload: { title: string; body?: string; assertion_ids?: string[] }): Promise<string> =>\n      ipcRenderer.invoke('db:finding:create', payload),\n    updateFinding: (findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>): Promise<boolean> =>\n      ipcRenderer.invoke('db:finding:update', findingId, updates),\n    deleteFinding: (findingId: string): Promise<boolean> => ipcRenderer.invoke('db:finding:delete', findingId),\n    exportFindingsBundle: (): Promise<{ outputDir: string; findingCount: number; sourceCount: number }> =>\n      ipcRenderer.invoke('report:findings:export-bundle'),\n"
+          if 'listFindings:' not in text:
+              if marker not in text: raise SystemExit('Preload marker missing')
+              text = text.replace(marker, addition, 1)
+          p.write_text(text)
+
+          # Renderer global bridge contract
+          p = Path('app/renderer/src/global.d.ts')
+          text = p.read_text()
+          if 'FindingRecord,' not in text:
+              text = text.replace('  EntityRecord,\n', '  EntityRecord,\n  FindingRecord,\n', 1)
+          marker = "  listAuditBySubject: (subjectKind: string, subjectId: string) => Promise<AuditRecord[]>;\n"
+          addition = marker + "  listFindings: () => Promise<FindingRecord[]>;\n  createFinding: (payload: { title: string; body?: string; assertion_ids?: string[] }) => Promise<string>;\n  updateFinding: (findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>) => Promise<boolean>;\n  deleteFinding: (findingId: string) => Promise<boolean>;\n  exportFindingsBundle: () => Promise<{ outputDir: string; findingCount: number; sourceCount: number }>;\n"
+          if 'listFindings:' not in text:
+              if marker not in text: raise SystemExit('Global marker missing')
+              text = text.replace(marker, addition, 1)
+          p.write_text(text)
+
+          # Renderer typed wrapper
+          p = Path('app/renderer/src/services/piBridge.ts')
+          text = p.read_text()
+          if 'FindingRecord,' not in text:
+              text = text.replace('  EntityRecord,\n', '  EntityRecord,\n  FindingRecord,\n', 1)
+          marker = "  listAuditBySubject(subjectKind: string, subjectId: string): Promise<AuditRecord[]> {\n    return window.piBridge.listAuditBySubject(subjectKind, subjectId);\n  },\n"
+          addition = marker + "  listFindings(): Promise<FindingRecord[]> {\n    return window.piBridge.listFindings();\n  },\n  createFinding(payload: { title: string; body?: string; assertion_ids?: string[] }): Promise<string> {\n    return window.piBridge.createFinding(payload);\n  },\n  updateFinding(findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>): Promise<boolean> {\n    return window.piBridge.updateFinding(findingId, updates);\n  },\n  deleteFinding(findingId: string): Promise<boolean> {\n    return window.piBridge.deleteFinding(findingId);\n  },\n  exportFindingsBundle(): Promise<{ outputDir: string; findingCount: number; sourceCount: number }> {\n    return window.piBridge.exportFindingsBundle();\n  },\n"
+          if 'listFindings()' not in text:
+              if marker not in text: raise SystemExit('piBridge marker missing')
+              text = text.replace(marker, addition, 1)
+          p.write_text(text)
+          PY
+      - name: Commit bridge wiring and remove one-shot workflow
+        run: |
+          git rm .github/workflows/vitni2-findings-wire.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/main/ipc/index.ts app/preload/preload.ts app/renderer/src/global.d.ts app/renderer/src/services/piBridge.ts
+          git commit -m "feat: wire findings through Electron bridge"
+          git push origin HEAD:agent/vitni-2-findings-reporting
