@@ -1,0 +1,51 @@
+name: Vitni 2 docs ledger
+
+on:
+  push:
+    branches: [agent/vitni-2-attention-evidence]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/vitni-2-attention-evidence
+          fetch-depth: 0
+      - name: Update changelog and implementation ledger
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          marker = "- Added a derived Needs Attention model and workspace that explains unsupported, disputed, unreviewed, and unverified assertions, includes unit tests, and writes Accept/Dispute/Reject actions through the existing persisted review API.\n"
+          addition = marker + "- Deepened Vitni 2 Needs Attention into an evidence-resolution workflow: assertions can relink existing evidence in place, inspect or replace supporting sources, record analyst review notes, separate review state from confidence, and write review/evidence decisions to the audit log.\n- Added Evidence intake health signals for unlinked material and probable duplicate sources based on exact file hashes or normalized locators.\n"
+          if marker not in text:
+              raise SystemExit('Changelog insertion marker missing')
+          changelog.write_text(text.replace(marker, addition, 1))
+
+          status = Path('docs/vitni-2-status.md')
+          text = status.read_text()
+          text = text.replace(
+              "- ⏳ Duplicate/conflict checks during intake.",
+              "- ✅ Evidence intake now surfaces unlinked material and probable duplicate source groups using deterministic hash/locator checks.\n- ⏳ Unified preview/extraction review flow.\n- ⏳ Suggested entity/event/assertion staging before mutation.\n- ⏳ Richer contradiction signals between source contents/claims."
+          )
+          old = "### PR #19 — Attention + evidence workflow depth\n\n- make `Needs Attention` the primary quality-control workflow rather than an abstract review queue\n- refine review/confidence interaction so accepting a claim has predictable semantics\n- attach or replace a source directly from assertion attention context\n- expose supporting and conflicting evidence together when reviewing a claim\n- add review-note editing and useful review history presentation\n- add evidence preview/intake staging before case mutation\n- add duplicate/conflict signals based on evidence rather than synthetic UI state\n- make successful resolution remove or reclassify the attention item immediately"
+          new = "### PR #19 — Attention + evidence workflow depth (active)\n\n- ✅ `Needs Attention` now exposes evidence and analyst-decision context instead of acting as an abstract queue.\n- ✅ Review state and confidence are separate, explicit axes; accepted + unverified claims remain as verification work.\n- ✅ Rejected claims are completed decisions and leave the queue.\n- ✅ Assertions can attach or replace an existing evidence source in place, preserving assertion identity.\n- ✅ Evidence relinking validates source existence in the main process.\n- ✅ Review notes, review metadata, confidence changes, and evidence-link decisions are persisted/audited.\n- ✅ Evidence intake surfaces unlinked sources and deterministic duplicate signals.\n- ⏳ Full source-content contradiction modelling remains future work.\n- ⏳ Rich review-history presentation remains future work.\n- ⏳ Unified preview/extraction staging before case mutation remains future work."
+          if old not in text:
+              raise SystemExit('Status PR #19 block missing')
+          status.write_text(text.replace(old, new, 1))
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          git rm .github/workflows/vitni2-doc-ledger.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add CHANGELOG.md docs/vitni-2-status.md
+          git commit -m "docs: record attention and evidence workflow progress"
+          git push origin HEAD:agent/vitni-2-attention-evidence
