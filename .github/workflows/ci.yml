@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -20,8 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -31,41 +29,8 @@ jobs:
       - name: Check release metadata
         run: npm run release:check
 
-      - name: Resolve upgraded dependency graph
-        if: github.head_ref == 'agent/modernize-stack'
-        run: |
-          rm package-lock.json
-          npm install --package-lock-only --ignore-scripts
-
-      - name: Commit upgraded lockfile
-        if: github.head_ref == 'agent/modernize-stack'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'build: refresh modern dependency lockfile'
-            git push origin HEAD:agent/modernize-stack
-          fi
-
-      # Native better-sqlite3 rebuild is deliberately skipped during iterative
-      # compiler/lint migration checks. The final cleaned-up CI run restores the
-      # normal `npm ci` postinstall and proves the Electron 43 native build.
       - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Apply modernization source fixes
-        if: github.head_ref == 'agent/modernize-stack'
-        run: |
-          node tools/apply-modernization-fixes.mjs
-          git add app/main/projectManager.ts app/main/services/ollama.ts \
-            app/renderer/src/components/ProjectSettingsModal.tsx \
-            app/renderer/src/components/GraphWorkspace.tsx \
-            app/renderer/src/components/TitleBar.tsx tsconfig.base.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'fix: adapt source to modern tooling'
-            git push origin HEAD:agent/modernize-stack
-          fi
+        run: npm ci
 
       - name: Lint
         run: npm run lint
@@ -78,3 +43,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # One-time proof for the stack modernization. Removed after it passes so
+      # ordinary Vitni PRs do not pay the cost of packaging on every change.
+      - name: Package Linux smoke test
+        if: github.head_ref == 'agent/modernize-stack'
+        run: npm run package:linux
