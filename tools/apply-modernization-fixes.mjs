@@ -16,6 +16,21 @@ const fixes = [
     path: 'app/renderer/src/components/ProjectSettingsModal.tsx',
     from: '    } catch (e) {\n      // noop - could add toast later',
     to: '    } catch {\n      // noop - could add toast later'
+  },
+  {
+    path: 'app/renderer/src/components/GraphWorkspace.tsx',
+    from: '  filterRef: React.RefObject<HTMLDivElement>;',
+    to: '  filterRef: React.RefObject<HTMLDivElement | null>;'
+  },
+  {
+    path: 'app/renderer/src/components/TitleBar.tsx',
+    from: '                ref={(el) => (menuRefs.current[menuName] = el)}',
+    to: '                ref={(el) => {\n                  menuRefs.current[menuName] = el;\n                }}'
+  },
+  {
+    path: 'tsconfig.base.json',
+    from: '    "target": "ES2021",\n    "lib": ["DOM", "ES2021"],',
+    to: '    "target": "ES2022",\n    "lib": ["DOM", "ES2022"],'
   }
 ];
 
