@@ -31,6 +31,7 @@ import type { DbConnection } from '../persistence/database';
 import { deviceSettingsService } from '../services/deviceSettings';
 import type { OllamaManager } from '../services/ollama';
 import { openAIService } from '../services/openai';
+import { registerFindingHandlers } from './findings';
 import { normalizePersonalizationTheme, type PersonalizationTheme } from '../../renderer/src/features/personalization/theme';
 
 /**
@@ -364,6 +365,8 @@ export function registerIpcHandlers(
   ollamaManager: OllamaManager,
   mainWindow: BrowserWindow | null
 ) {
+  registerFindingHandlers(ipcMain, projectManager);
+
   // Native shell helpers keep Electron-specific behavior behind the bridge so
   // renderer components can stay focused on workflow/UI state.
   ipcMain.handle('app:openExternal', async (_e, url: string) => {

@@ -3,6 +3,7 @@ import type {
   AssertionReviewState,
   AuditRecord,
   EntityRecord,
+  FindingRecord,
   MediaFolderNode,
   MediaLibraryItem,
   SourceRecord,
@@ -23,6 +24,21 @@ export const piBridge = {
   },
   listAuditBySubject(subjectKind: string, subjectId: string): Promise<AuditRecord[]> {
     return window.piBridge.listAuditBySubject(subjectKind, subjectId);
+  },
+  listFindings(): Promise<FindingRecord[]> {
+    return window.piBridge.listFindings();
+  },
+  createFinding(payload: { title: string; body?: string; assertion_ids?: string[] }): Promise<string> {
+    return window.piBridge.createFinding(payload);
+  },
+  updateFinding(findingId: string, updates: Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>): Promise<boolean> {
+    return window.piBridge.updateFinding(findingId, updates);
+  },
+  deleteFinding(findingId: string): Promise<boolean> {
+    return window.piBridge.deleteFinding(findingId);
+  },
+  exportFindingsBundle(): Promise<{ outputDir: string; findingCount: number; sourceCount: number }> {
+    return window.piBridge.exportFindingsBundle();
   },
   recordAudit(payload: Omit<AuditRecord, 'created_at' | 'id'>): Promise<string> {
     return window.piBridge.recordAudit(payload);
