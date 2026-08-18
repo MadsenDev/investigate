@@ -40,6 +40,10 @@ const screenshotWorkspaces = new Set<Vitni2Workspace>([
   'search'
 ]);
 
+function sameIds(left: string[], right: string[]) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 export function Vitni2App() {
   const legacy = useAppStore();
   const { graph, assertions, sources, attentionItems, recentActivity, loading, error, refresh } = useInvestigationData();
@@ -95,33 +99,34 @@ export function Vitni2App() {
   }, [clearSelection, legacy.setShowWelcome, setWorkspace]);
 
   useEffect(() => {
-    if (!selection) {
-      legacy.setSelectedNodeId(null);
-      legacy.setSelectedNodeIds([]);
-      legacy.setSelectedEdgeId(null);
-      return;
-    }
-    if (selection.kind === 'entity' || selection.kind === 'event') {
-      legacy.setSelectedNodeId(selection.id);
-      legacy.setSelectedNodeIds([selection.id]);
-      legacy.setSelectedEdgeId(null);
-      return;
-    }
-    if (selection.kind === 'relationship') {
-      legacy.setSelectedNodeId(null);
-      legacy.setSelectedNodeIds([]);
-      legacy.setSelectedEdgeId(selection.id);
-      return;
-    }
-    if (selection.kind === 'assertion') {
+    let nextNodeId: string | null = null;
+    let nextNodeIds: string[] = [];
+    let nextEdgeId: string | null = null;
+
+    if (selection?.kind === 'entity' || selection?.kind === 'event') {
+      nextNodeId = selection.id;
+      nextNodeIds = [selection.id];
+    } else if (selection?.kind === 'relationship') {
+      nextEdgeId = selection.id;
+    } else if (selection?.kind === 'assertion') {
       const assertion = assertions.find((item) => item.id === selection.id);
       if (assertion) {
-        legacy.setSelectedNodeId(assertion.subject_id);
-        legacy.setSelectedNodeIds([assertion.subject_id]);
-        legacy.setSelectedEdgeId(null);
+        nextNodeId = assertion.subject_id;
+        nextNodeIds = [assertion.subject_id];
       }
     }
-  }, [assertions, legacy, selection]);
+
+    const legacyState = useAppStore.getState();
+    if (legacyState.selectedNodeId !== nextNodeId) {
+      legacyState.setSelectedNodeId(nextNodeId);
+    }
+    if (!sameIds(legacyState.selectedNodeIds, nextNodeIds)) {
+      legacyState.setSelectedNodeIds(nextNodeIds);
+    }
+    if (legacyState.selectedEdgeId !== nextEdgeId) {
+      legacyState.setSelectedEdgeId(nextEdgeId);
+    }
+  }, [assertions, selection]);
 
   useEffect(() => {
     const offNew = piMenu.onProjectNew(() => setProjectCreationOpen(true));
