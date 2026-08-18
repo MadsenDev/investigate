@@ -123,6 +123,20 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ⏳ Reproducible report/export bundles.
 - ⏳ AI narrative assistance only after deterministic findings/citations are established.
 
+## Visual capture / screenshot infrastructure
+
+- ✅ PR #17 is merged and Vitni 2 foundation is now on `main`.
+- 🚧 Follow-up branch `agent/vitni-2-screenshots` adds deterministic real-Electron screenshot capture.
+- ✅ Screenshot mode opens the repository showcase investigation before renderer boot and forces Vitni 2.
+- ✅ Capture uses Electron `webContents.capturePage()` rather than a browser mock.
+- ✅ Fixed screenshot viewport: 1600×1000.
+- ✅ Renderer exposes a screenshot-only workspace navigation hook guarded by `?screenshot=1`.
+- ✅ Planned capture set: Overview, Graph, Timeline, Entities, Assertions, Sources, Needs Attention, Evidence, Reports, Search.
+- ✅ GitHub Actions prepares the sample SQLite database, launches Electron under Xvfb, verifies every PNG and uploads a `vitni2-screenshots` artifact for 14 days.
+- ⏳ The first workflow run must be inspected before this infrastructure is considered proven.
+
+Rule going forward: meaningful Vitni 2 UI PRs should produce a screenshot artifact so visual progress can be reviewed alongside tests and code.
+
 ## Deliberately not migrated yet
 
 These currently show an explicit migration state or remain accessible through legacy/settings surfaces. They should not be copied blindly; each should be evaluated against the Vitni 2 product model.
@@ -136,26 +150,9 @@ These currently show an explicit migration state or remain accessible through le
 - tutorials/onboarding
 - advanced personalization UX
 
-## Validation state
+## Recommended next work
 
-PR: **#17 — Build Vitni 2 investigation workspace foundation**
-
-CI requirements before this foundation is ready:
-
-- release metadata
-- native dependency install / `better-sqlite3` rebuild
-- lint
-- TypeScript
-- unit tests
-- production build
-
-First CI attempt failed only on three new lint findings (two unused imports and one unescaped JSX apostrophe); these were corrected without weakening lint rules.
-
-A final status should only be recorded here after CI runs against a stable head.
-
-## Recommended PR sequence after #17
-
-### PR 18 — attention + evidence workflow depth
+### Attention + evidence workflow depth
 
 - refine review/confidence interaction
 - source attachment directly from assertion attention context
@@ -163,7 +160,7 @@ A final status should only be recorded here after CI runs against a stable head.
 - evidence preview/intake staging
 - duplicate/conflict signals based on evidence rather than synthetic UI state
 
-### PR 19 — graph + timeline investigation flow
+### Graph + timeline investigation flow
 
 - relationship/evidence filtering
 - neighborhood expansion controls
@@ -172,7 +169,7 @@ A final status should only be recorded here after CI runs against a stable head.
 - saved investigative perspectives
 - larger-case performance/decluttering pass
 
-### PR 20 — findings + reporting
+### Findings + reporting
 
 - durable finding concept if the existing schema cannot express it cleanly
 - deterministic finding → assertion → source provenance
@@ -180,7 +177,7 @@ A final status should only be recorded here after CI runs against a stable head.
 - reproducible export bundle
 - optional AI narrative on top, never as source of truth
 
-### PR 21 — remaining capability migration
+### Remaining capability migration
 
 Evaluate transforms, AI, profiles, personalization, terminology and onboarding. Remove features that do not earn a place in the Vitni 2 workflow instead of preserving them out of nostalgia.
 
