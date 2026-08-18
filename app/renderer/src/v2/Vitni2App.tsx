@@ -81,8 +81,6 @@ export function Vitni2App() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('screenshot') !== '1') return;
 
-    // Screenshot mode pre-opens a deterministic case in the main process, so it
-    // intentionally bypasses the interactive project chooser/welcome transition.
     legacy.setShowWelcome(false);
 
     const handler = (event: Event) => {
@@ -237,10 +235,10 @@ export function Vitni2App() {
       content = <OverviewWorkspace graph={graph} assertions={assertions} sources={sources} attentionItems={attentionItems} recentActivity={recentActivity} onSelect={handleSelect} onNavigate={setWorkspace} />;
       break;
     case 'graph':
-      content = <GraphWorkspaceV2 graph={graph} selection={selection} personalizationTheme={legacy.personalizationTheme} onSelect={handleSelect} />;
+      content = <GraphWorkspaceV2 graph={graph} assertions={assertions} selection={selection} personalizationTheme={legacy.personalizationTheme} onSelect={handleSelect} />;
       break;
     case 'timeline':
-      content = <TimelineWorkspaceV2 graph={graph} selection={selection} onSelect={handleSelect} />;
+      content = <TimelineWorkspaceV2 graph={graph} assertions={assertions} selection={selection} onSelect={handleSelect} />;
       break;
     case 'entities':
       content = <EntitiesWorkspace graph={graph} attentionItems={attentionItems} onSelect={handleSelect} />;

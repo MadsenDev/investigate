@@ -71,27 +71,33 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 ### Graph
 
 - ✅ Existing proven Cytoscape `GraphCanvas` reused inside the Vitni 2 shell.
-- ✅ Search.
-- ✅ Entity type filtering.
-- ✅ Selected-entity neighborhood focus mode.
-- ✅ Existing graph layout presets can run.
-- ✅ Fit-to-screen.
+- ✅ Search and entity-type filtering.
+- ✅ Relationship-type filtering.
+- ✅ Evidence-aware filters for entities with cited assertions or unresolved claim quality.
+- ✅ Shared selection context works for entity/event, relationship, assertion and source selections.
+- ✅ Context can expand one or two graph hops from the current investigative anchor.
+- ✅ Source context resolves through every assertion citing that source.
+- ✅ Assertion context resolves to its subject entity without changing the user selection.
+- ✅ Connected-only mode removes isolated graph noise while preserving context anchors.
+- ✅ Existing graph layout presets and fit-to-screen remain available.
+- ✅ Saved Vitni 2 graph perspectives persist filter/context state in project settings.
 - ✅ Entity/relationship selection shares the global Inspector context.
-- ⏳ Relationship/evidence-strength filtering.
-- ⏳ Better large-case progressive disclosure and clustering.
-- ⏳ Saved-view compatibility in the new shell.
-- ⏳ Selection-aware handoff into Timeline beyond event selection.
+- ⏳ More advanced clustering may still be useful for very large cases after real-world testing.
 
 ### Timeline
 
 - ✅ Dedicated Vitni 2 Timeline workspace.
 - ✅ Uses real `event` and `incident` entities.
 - ✅ Parses common event-date properties with creation timestamp as fallback.
+- ✅ Normalizes both second- and millisecond-based numeric timestamps.
 - ✅ Search and event/incident filtering.
 - ✅ Chronological grouping by year.
 - ✅ Event selection uses the same global Inspector context.
-- ⏳ Scale controls and richer grouping.
-- ⏳ Highlight/filter chronology by selected entity, assertion or source.
+- ✅ Entity, relationship, assertion and source selections can narrow chronology through the same shared investigation-context model as Graph.
+- ✅ One-hop/two-hop chronology context is available where related event entities exist.
+- ✅ If a selection has no related event entities, Timeline keeps the complete chronology visible and explains why instead of producing a misleading empty state.
+- ✅ Saved Vitni 2 timeline perspectives persist event/context filters in project settings.
+- ⏳ Scale controls and richer chronology grouping can follow if real cases justify them.
 
 ### Search
 
@@ -99,7 +105,7 @@ This file is the short operational companion to [`vitni-2.md`](./vitni-2.md). Th
 - ✅ Reuses existing indexed search implementation.
 - ✅ Searches entities, relationships, assertions and sources.
 - ✅ Search results land in the shared selection/Inspector model.
-- ⏳ Saved investigative perspectives remain to be integrated with this surface.
+- ✅ Selecting a search result now also becomes meaningful Graph/Timeline context when those workspaces are opened.
 
 ### Evidence
 
@@ -146,7 +152,6 @@ Rule going forward: run the manual screenshot workflow at meaningful Vitni 2 vis
 These currently show an explicit migration state or remain accessible through legacy/settings surfaces. They should not be copied blindly; each should be evaluated against the Vitni 2 product model.
 
 - Transforms
-- Saved Views / saved investigative perspectives
 - AI Assistant workspace
 - Investigation Profiles dedicated workspace
 - Export management outside report generation
@@ -156,9 +161,9 @@ These currently show an explicit migration state or remain accessible through le
 
 ## Recommended next work
 
-### PR #19 — Attention + evidence workflow depth (active)
+### PR #19 — Attention + evidence workflow depth (merged)
 
-- ✅ `Needs Attention` now exposes evidence and analyst-decision context instead of acting as an abstract queue.
+- ✅ `Needs Attention` exposes evidence and analyst-decision context instead of acting as an abstract queue.
 - ✅ Review state and confidence are separate, explicit axes; accepted + unverified claims remain as verification work.
 - ✅ Rejected claims are completed decisions and leave the queue.
 - ✅ Assertions can attach or replace an existing evidence source in place, preserving assertion identity.
@@ -169,14 +174,16 @@ These currently show an explicit migration state or remain accessible through le
 - ⏳ Full source-content contradiction modelling remains future work.
 - ⏳ Unified preview/extraction staging before case mutation remains future work.
 
-### PR #20 — Graph + timeline investigation flow
+### PR #20 — Graph + timeline investigation flow (active)
 
-- relationship/evidence filtering
-- neighborhood expansion controls
-- selected-entity chronology
-- selected-source/assertion highlights
-- saved investigative perspectives
-- larger-case performance/decluttering pass
+- ✅ shared selection context across Graph and Timeline
+- ✅ relationship/evidence filtering
+- ✅ one-hop/two-hop neighborhood expansion controls
+- ✅ selected-entity chronology
+- ✅ selected-source/assertion context in both views
+- ✅ project-level saved investigative perspectives for Graph and Timeline
+- ✅ connected-only graph decluttering pass
+- ⏳ validate large-case behavior with real cases before introducing automatic clustering
 
 ### PR #21 — Findings + reporting
 

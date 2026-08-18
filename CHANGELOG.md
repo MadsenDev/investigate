@@ -14,6 +14,8 @@ This project loosely follows the spirit of [Keep a Changelog](https://keepachang
 - Added a derived Needs Attention model and workspace that explains unsupported, disputed, unreviewed, and unverified assertions, includes unit tests, and writes Accept/Dispute/Reject actions through the existing persisted review API.
 - Deepened Vitni 2 Needs Attention into an evidence-resolution workflow: assertions can relink existing evidence in place, inspect or replace supporting sources, record analyst review notes, separate review state from confidence, and write review/evidence decisions to the audit log.
 - Added Evidence intake health signals for unlinked material and probable duplicate sources based on exact file hashes or normalized locators.
+- Added shared Graph/Timeline investigation context so entity, relationship, assertion, and source selections carry across both views, with one-hop/two-hop expansion, relationship/evidence filtering, connected-only graph decluttering, and context-aware chronology.
+- Added case-level saved investigative perspectives for Vitni 2 Graph and Timeline so filter/context setups can be named and restored later.
 - Added Vitni 2 Entity, Assertion, Source, Graph, Timeline, Search, Evidence, and Reports workspaces. Existing Cytoscape graph rendering, media management, CSV import, source attachment, Settings, and report generation are reused behind the new product flow instead of being forked.
 - Added pull-request and `main` CI covering release metadata, linting, type checking, renderer tests, and production builds.
 - Added unified release tooling that validates and prepares `package.json`, `package-lock.json`, the sample case manifest, and `CHANGELOG.md` together, and can extract release notes for GitHub Releases.
