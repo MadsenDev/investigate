@@ -1,4 +1,4 @@
-import { FaArrowRight, FaClock, FaDatabase, FaFlag, FaLink, FaProjectDiagram, FaRegListAlt, FaUserFriends } from 'react-icons/fa';
+import { FaArrowRight, FaClock, FaDatabase, FaFlag, FaProjectDiagram, FaRegListAlt, FaUserFriends } from 'react-icons/fa';
 import type { SourceWithUsage } from '@shared/types';
 import type { ParsedAssertionRecord } from '@renderer/services/piBridge';
 import type { GraphSnapshot } from '@renderer/types/graph';
