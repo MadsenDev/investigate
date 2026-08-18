@@ -332,7 +332,9 @@ export function TitleBar({
             </button>
             {activeMenu === menuName && (
               <div
-                ref={(el) => (menuRefs.current[menuName] = el)}
+                ref={(el) => {
+                  menuRefs.current[menuName] = el;
+                }}
                 className="panel-elevated absolute left-0 top-9 z-[60] mt-1 min-w-[220px] rounded-xl py-1"
                 style={{ 
                   maxWidth: 'min(300px, calc(100vw - 2rem))',
