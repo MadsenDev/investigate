@@ -1,0 +1,205 @@
+import type { IpcMain } from 'electron';
+import { randomUUID } from 'node:crypto';
+import * as fsp from 'node:fs/promises';
+import path from 'node:path';
+import type { FindingRecord, FindingStatus } from '../../../shared/types';
+import type { DbConnection } from '../persistence/database';
+import type { ProjectManager } from '../projectManager';
+
+type FindingRow = Omit<FindingRecord, 'assertion_ids'>;
+
+type FindingCreatePayload = {
+  title: string;
+  body?: string;
+  assertion_ids?: string[];
+};
+
+type FindingUpdatePayload = Partial<Pick<FindingRecord, 'title' | 'body' | 'status' | 'assertion_ids'>>;
+
+const VALID_STATUSES = new Set<FindingStatus>(['draft', 'reviewed', 'disputed', 'withdrawn']);
+
+function normalizeAssertionIds(db: DbConnection, ids: string[] | undefined): string[] {
+  const unique = Array.from(new Set((ids ?? []).filter(Boolean)));
+  if (unique.length === 0) return [];
+  const exists = db.prepare('SELECT 1 FROM assertion WHERE id = ? LIMIT 1');
+  for (const id of unique) {
+    if (!exists.get(id)) throw new Error(`Assertion does not exist: ${id}`);
+  }
+  return unique;
+}
+
+function replaceFindingAssertions(db: DbConnection, findingId: string, assertionIds: string[]) {
+  db.prepare('DELETE FROM finding_assertion WHERE finding_id = ?').run(findingId);
+  const insert = db.prepare(
+    'INSERT INTO finding_assertion (finding_id, assertion_id, position) VALUES (?, ?, ?)'
+  );
+  assertionIds.forEach((assertionId, index) => insert.run(findingId, assertionId, index));
+}
+
+function listFindings(db: DbConnection): FindingRecord[] {
+  const rows = db.prepare(
+    'SELECT id, title, body, status, created_at, updated_at FROM finding ORDER BY updated_at DESC, id ASC'
+  ).all() as FindingRow[];
+  const links = db.prepare(
+    'SELECT assertion_id FROM finding_assertion WHERE finding_id = ? ORDER BY position ASC, assertion_id ASC'
+  );
+  return rows.map((row) => ({
+    ...row,
+    assertion_ids: (links.all(row.id) as Array<{ assertion_id: string }>).map((item) => item.assertion_id)
+  }));
+}
+
+function findingBundle(db: DbConnection, projectManager: ProjectManager) {
+  const findings = listFindings(db).filter((finding) => finding.status === 'reviewed');
+  const assertionById = new Map(
+    (db.prepare(
+      `SELECT id, subject_kind, subject_id, path, value_json, source_id, confidence, review_state,
+              review_note, reviewed_by, reviewed_at, created_at
+       FROM assertion ORDER BY id ASC`
+    ).all() as Array<Record<string, unknown>>).map((row) => [String(row.id), row])
+  );
+  const sourceById = new Map(
+    (db.prepare(
+      `SELECT id, kind, locator, title, added_at, hash, mime, folder_path, file_name, display_name,
+              file_size, modified_at FROM source ORDER BY id ASC`
+    ).all() as Array<Record<string, unknown>>).map((row) => [String(row.id), row])
+  );
+
+  const bundleFindings = findings.map((finding) => {
+    const assertions = finding.assertion_ids
+      .map((id) => assertionById.get(id))
+      .filter((value): value is Record<string, unknown> => Boolean(value))
+      .map((assertion) => ({
+        ...assertion,
+        value: (() => {
+          try { return JSON.parse(String(assertion.value_json ?? '{}')); } catch { return {}; }
+        })(),
+        value_json: undefined,
+        source: sourceById.get(String(assertion.source_id)) ?? null
+      }));
+    return { ...finding, assertions };
+  });
+
+  const sourceIds = new Set<string>();
+  for (const finding of bundleFindings) {
+    for (const assertion of finding.assertions) {
+      if (assertion.source_id) sourceIds.add(String(assertion.source_id));
+    }
+  }
+  const sources = Array.from(sourceIds).sort().map((id) => sourceById.get(id)).filter(Boolean);
+  return {
+    format: 'vitni-findings-evidence-v1',
+    case: {
+      id: projectManager.getManifest().id,
+      name: projectManager.getManifest().name
+    },
+    findings: bundleFindings,
+    sources
+  };
+}
+
+function markdownForBundle(bundle: ReturnType<typeof findingBundle>): string {
+  const lines: string[] = [
+    `# ${bundle.case.name} — Findings & Evidence`,
+    '',
+    `Case ID: \`${bundle.case.id}\``,
+    '',
+    'This export is deterministic case provenance. Findings are included only when their status is `reviewed`.',
+    ''
+  ];
+  bundle.findings.forEach((finding, findingIndex) => {
+    lines.push(`## F${findingIndex + 1}. ${finding.title}`, '', finding.body || '_No narrative recorded._', '');
+    if (finding.assertions.length === 0) {
+      lines.push('**Warning:** this reviewed finding has no linked assertions.', '');
+      return;
+    }
+    lines.push('### Supporting assertions', '');
+    finding.assertions.forEach((assertion, assertionIndex) => {
+      const source = assertion.source as Record<string, unknown> | null;
+      lines.push(
+        `${assertionIndex + 1}. **${String(assertion.path)}** — ${JSON.stringify(assertion.value)}`,
+        `   - Assertion ID: \`${String(assertion.id)}\``,
+        `   - Review: ${String(assertion.review_state)} · Confidence: ${String(assertion.confidence)}`,
+        source
+          ? `   - Source: ${String(source.title || source.display_name || source.file_name || source.locator)} (\`${String(source.id)}\`)`
+          : '   - Source: **missing**',
+        ''
+      );
+    });
+  });
+  lines.push('## Evidence appendix', '');
+  if (bundle.sources.length === 0) lines.push('_No cited sources._', '');
+  bundle.sources.forEach((source, index) => {
+    const item = source as Record<string, unknown>;
+    lines.push(
+      `${index + 1}. **${String(item.title || item.display_name || item.file_name || item.locator)}**`,
+      `   - ID: \`${String(item.id)}\``,
+      `   - Kind: ${String(item.kind)}`,
+      `   - Locator: ${String(item.locator)}`,
+      item.hash ? `   - SHA/hash: \`${String(item.hash)}\`` : '   - SHA/hash: not recorded',
+      ''
+    );
+  });
+  return `${lines.join('\n').trim()}\n`;
+}
+
+export function registerFindingHandlers(ipcMain: IpcMain, projectManager: ProjectManager) {
+  ipcMain.handle('db:findings:list', () => listFindings(projectManager.getDatabase()));
+
+  ipcMain.handle('db:finding:create', (_event, payload: FindingCreatePayload) => {
+    const db = projectManager.getDatabase();
+    const title = payload.title.trim();
+    if (!title) throw new Error('Finding title is required');
+    const assertionIds = normalizeAssertionIds(db, payload.assertion_ids);
+    const now = Math.floor(Date.now() / 1000);
+    const id = randomUUID();
+    const create = db.transaction(() => {
+      db.prepare(
+        'INSERT INTO finding (id, title, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(id, title, payload.body?.trim() ?? '', 'draft', now, now);
+      replaceFindingAssertions(db, id, assertionIds);
+    });
+    create();
+    return id;
+  });
+
+  ipcMain.handle('db:finding:update', (_event, findingId: string, updates: FindingUpdatePayload) => {
+    const db = projectManager.getDatabase();
+    const existing = db.prepare('SELECT id FROM finding WHERE id = ? LIMIT 1').get(findingId);
+    if (!existing) throw new Error(`Finding does not exist: ${findingId}`);
+    if (updates.status && !VALID_STATUSES.has(updates.status)) throw new Error('Invalid finding status');
+    if (updates.title !== undefined && !updates.title.trim()) throw new Error('Finding title is required');
+    const assertionIds = updates.assertion_ids === undefined ? null : normalizeAssertionIds(db, updates.assertion_ids);
+    const update = db.transaction(() => {
+      const current = db.prepare('SELECT title, body, status FROM finding WHERE id = ?').get(findingId) as FindingRow;
+      db.prepare(
+        'UPDATE finding SET title = ?, body = ?, status = ?, updated_at = ? WHERE id = ?'
+      ).run(
+        updates.title?.trim() ?? current.title,
+        updates.body?.trim() ?? current.body,
+        updates.status ?? current.status,
+        Math.floor(Date.now() / 1000),
+        findingId
+      );
+      if (assertionIds) replaceFindingAssertions(db, findingId, assertionIds);
+    });
+    update();
+    return true;
+  });
+
+  ipcMain.handle('db:finding:delete', (_event, findingId: string) => {
+    const result = projectManager.getDatabase().prepare('DELETE FROM finding WHERE id = ?').run(findingId);
+    return result.changes > 0;
+  });
+
+  ipcMain.handle('report:findings:export-bundle', async () => {
+    const db = projectManager.getDatabase();
+    const bundle = findingBundle(db, projectManager);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const outputDir = path.join(projectManager.getRoot(), projectManager.getManifest().paths.exports, `findings-evidence-${stamp}`);
+    await fsp.mkdir(outputDir, { recursive: true });
+    await fsp.writeFile(path.join(outputDir, 'findings-evidence.json'), `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
+    await fsp.writeFile(path.join(outputDir, 'findings-evidence.md'), markdownForBundle(bundle), 'utf8');
+    return { outputDir, findingCount: bundle.findings.length, sourceCount: bundle.sources.length };
+  });
+}
