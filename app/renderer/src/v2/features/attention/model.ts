@@ -32,8 +32,8 @@ export const ATTENTION_REASON_COPY: Record<AttentionReason, { label: string; des
     description: 'The assertion has not been reviewed yet.'
   },
   unverified: {
-    label: 'Unverified claim',
-    description: 'The assertion confidence is still unverified.'
+    label: 'Verification pending',
+    description: 'The claim has not reached asserted or verified confidence yet.'
   }
 };
 
@@ -62,6 +62,10 @@ export function buildAttentionItems(
 
   return assertions
     .map((assertion): AttentionItem | null => {
+      // Rejection is a completed analyst decision. The record remains available
+      // in Assertions/history, but it should not continue behaving like work to do.
+      if (assertion.review_state === 'rejected') return null;
+
       const reasons: AttentionReason[] = [];
       const source = assertion.source_id ? sourceById.get(assertion.source_id) : undefined;
 
